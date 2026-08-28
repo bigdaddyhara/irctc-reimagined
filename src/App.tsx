@@ -132,9 +132,11 @@ function App() {
 
   return <div className={`app-shell ${easyMode ? 'easy-mode' : ''}`}>
     <a className="skip-link" href="#main-content">Skip to main content</a>
-    <aside className="desktop-sidebar" aria-label="Primary navigation"><Brand /><PrimaryNavigation activeView={view} onNavigate={goTo} copy={copy} /><div className="sidebar-spacer" /><div className="prototype-note"><ShieldCheck size={18} aria-hidden="true" /><div><strong>Prototype mode</strong><span>Mock data only. No real railway booking or payment.</span></div></div></aside>
     <div className="main-column">
-      <header className="topbar"><div className="breadcrumb"><span>YatraSaathi</span><ChevronRight size={14} aria-hidden="true" /><strong>{copy[view] ?? (view === 'booking' ? 'Booking' : view === 'ticket' ? 'Ticket' : 'Journey mode')}</strong></div><button className="profile-chip" type="button" onClick={() => goTo('profile')}><span className="avatar">RK</span><span className="profile-name">Riya Kapoor</span><ChevronRight size={15} aria-hidden="true" /></button></header>
+      <header className="topbar site-header">
+        <div className="site-header-inner"><Brand onNavigate={() => goTo('home')} /><PrimaryNavigation activeView={view} onNavigate={goTo} copy={copy} /><div className="header-actions"><button className="header-help" type="button" onClick={() => setToast('Help centre preview coming next.')}><Info size={15} aria-hidden="true" />Help</button><button className="profile-chip" type="button" onClick={() => goTo('profile')}><span className="avatar">RK</span><span className="profile-name">Riya Kapoor</span><ChevronRight size={15} aria-hidden="true" /></button></div></div>
+        <div className="prototype-banner"><ShieldCheck size={15} aria-hidden="true" /><span><strong>YatraSaathi prototype</strong> · Mock data only. No real railway booking or payment.</span></div>
+      </header>
       <main id="main-content" className="content-area">
         {view === 'home' && <HomeView copy={copy} onSearch={handleSearch} onNavigate={goTo} onAnnounce={setToast} />}
         {view === 'search' && <SearchView copy={copy} filter={filter} visibleResults={visibleResults} onFilter={setFilter} onChoose={chooseTrain} onAnnounce={setToast} />}
@@ -145,30 +147,30 @@ function App() {
         {view === 'alerts' && <AlertsView delayed={delayed} onJourney={() => goTo('journey')} />}
         {view === 'profile' && <ProfileView easyMode={easyMode} language={language} onEasyMode={() => { setEasyMode((current) => !current); setToast(!easyMode ? 'Easy Mode is on.' : 'Easy Mode is off.') }} onLanguage={chooseLanguage} />}
       </main>
-      <MobileNavigation activeView={view} onNavigate={goTo} copy={copy} />
     </div>
     <div className={`toast ${toast ? 'toast-visible' : ''}`} role="status" aria-live="polite">{toast}</div>
   </div>
 }
 
-function Brand() {
-  return <div className="brand"><span className="brand-mark"><TrainFront size={20} aria-hidden="true" /></span><span><strong>Yatra<span>Saathi</span></strong><small>Your railway companion</small></span></div>
+function Brand({ onNavigate }: { onNavigate?: () => void }) {
+  return <a className="brand" href="#main-content" aria-label="YatraSaathi home" onClick={(event) => { if (!onNavigate) return; event.preventDefault(); onNavigate() }}><span className="brand-mark"><TrainFront size={20} aria-hidden="true" /></span><span><strong>Yatra<span>Saathi</span></strong><small>Your railway companion</small></span></a>
 }
 
 function PrimaryNavigation({ activeView, onNavigate, copy }: { activeView: View; onNavigate: (view: View) => void; copy: Record<string, string> }) {
-  return <nav className="primary-nav">{navItems.map(({ id, label, icon: Icon }) => <button type="button" key={id} aria-current={activeView === id ? 'page' : undefined} onClick={() => onNavigate(id)}><Icon size={18} aria-hidden="true" /><span>{copy[id] ?? label}</span>{id === 'alerts' && <em>2</em>}</button>)}</nav>
-}
-
-function MobileNavigation({ activeView, onNavigate, copy }: { activeView: View; onNavigate: (view: View) => void; copy: Record<string, string> }) {
-  return <nav className="mobile-nav" aria-label="Mobile navigation">{navItems.map(({ id, label, icon: Icon }) => <button type="button" key={id} aria-current={activeView === id ? 'page' : undefined} onClick={() => onNavigate(id)}><Icon size={19} aria-hidden="true" /><span>{copy[id] ?? label.replace(' trains', '')}</span></button>)}</nav>
+  return <nav className="primary-nav" aria-label="Main website navigation">{navItems.map(({ id, label, icon: Icon }) => <button type="button" key={id} aria-current={activeView === id ? 'page' : undefined} onClick={() => onNavigate(id)}><Icon size={16} aria-hidden="true" /><span>{copy[id] ?? label}</span>{id === 'alerts' && <em>2</em>}</button>)}</nav>
 }
 
 function HomeView({ copy, onSearch, onNavigate, onAnnounce }: { copy: Record<string, string>; onSearch: () => void; onNavigate: (view: View) => void; onAnnounce: (message: string) => void }) {
-  return <><div className="eyebrow"><Compass size={14} aria-hidden="true" />{copy.companion}</div><h1>{copy.where}</h1><p className="lede">Tell us what you need. We’ll help you compare trains, understand the choices, and get ready for the journey.</p>
+  return <><section className="home-hero"><div className="eyebrow"><Compass size={14} aria-hidden="true" />{copy.companion}</div><h1>{copy.where}</h1><p className="lede">Tell us what you need. We’ll help you compare trains, understand the choices, and get ready for the journey.</p>
     <section className="search-card" aria-label="Find a train"><div className="search-fields"><Field label="From" value="Chennai Central" icon={<MapPin size={17} aria-hidden="true" />} ariaLabel="Starting station" /><Field label="To" value="Bengaluru" icon={<NavigationIcon size={17} aria-hidden="true" />} ariaLabel="Destination station" /><Field label="Travel date" value="Tomorrow, 28 Aug" icon={<CalendarDays size={17} aria-hidden="true" />} ariaLabel="Travel date" /><Field label="Passengers" value="1 adult" icon={<UserRound size={17} aria-hidden="true" />} ariaLabel="Passengers" select /></div><div className="search-actions"><button className="primary-button" type="button" onClick={onSearch}><Search size={17} aria-hidden="true" />{copy.find}</button><button className="voice-button" type="button" onClick={() => onAnnounce('Voice preview: “Reach Bengaluru before 10 AM.”')}><Mic size={17} aria-hidden="true" />Try speaking</button></div><p className="search-hint">Try: “I need to reach Bengaluru before 10 AM and spend less than ₹800.”</p></section>
     <SectionHeading title="Your next journey" caption="We’ll keep the important details close by." action="See all trips" onAction={() => onNavigate('trips')} /><section className="next-trip-card"><div className="next-trip-copy"><span className="small-label">Upcoming · Sat, 29 Aug</span><h2>Chennai Central <ArrowRight size={18} aria-hidden="true" /> Bengaluru</h2><p>Brindavan Express · Coach S3 · Seat 42</p><div className="trip-meta"><span><Clock3 size={14} aria-hidden="true" />Departs 07:40 AM</span><span><MapPin size={14} aria-hidden="true" />Platform 6</span><span className="on-time"><CircleCheck size={14} aria-hidden="true" />On time</span></div></div><div className="countdown"><strong>1 day</strong><span>until departure</span><button className="light-button" type="button" onClick={() => onNavigate('journey')}>Open journey mode <ArrowRight size={15} aria-hidden="true" /></button></div></section>
     <SectionHeading title="Quick actions" caption="Common tasks, one tap away." /><div className="quick-grid"><QuickAction icon={<CalendarSearch size={20} aria-hidden="true" />} title="Find a train" caption="Compare your options" onClick={() => onNavigate('search')} /><QuickAction icon={<ScanLine size={20} aria-hidden="true" />} title="Check a ticket" caption="See your journey status" onClick={() => onNavigate('ticket')} /><QuickAction icon={<BellRing size={20} aria-hidden="true" />} title="View alerts" caption="2 updates for you" onClick={() => onNavigate('alerts')} /></div><div className="info-strip"><Info size={18} aria-hidden="true" /><div><strong>One thing to know</strong><span>Your next journey departs from Platform 6. We’ll tell you if anything changes.</span></div></div>
+    </section><WebsiteBenefits onNavigate={onNavigate} />
   </>
+}
+
+function WebsiteBenefits({ onNavigate }: { onNavigate: (view: View) => void }) {
+  return <section className="website-benefits" aria-labelledby="benefits-heading"><div className="benefits-intro"><div><span className="eyebrow"><ShieldCheck size={14} aria-hidden="true" />Built for simpler journeys</span><h2 id="benefits-heading">The important bits, without the railway jargon.</h2></div><p>Search, decide, and travel with clear information at every step. YatraSaathi keeps the next useful action close at hand.</p></div><div className="benefits-grid"><article><span className="benefit-icon"><Compass size={20} aria-hidden="true" /></span><h3>Choose with confidence</h3><p>See why a train is recommended, what “WL” means, and how each option fits your plan.</p></article><article><span className="benefit-icon"><Accessibility size={20} aria-hidden="true" /></span><h3>Made for real people</h3><p>Plain language, bigger controls, and Easy Mode help everyone feel at home.</p></article><article><span className="benefit-icon"><BellRing size={20} aria-hidden="true" /></span><h3>Stay one step ahead</h3><p>Keep your ticket, platform, and helpful updates together before and during your journey.</p></article></div><div className="website-cta"><div><strong>Already have a ticket?</strong><span>Open your journey details and see what matters today.</span></div><button className="secondary-button" type="button" onClick={() => onNavigate('trips')}>View my trips <ArrowRight size={15} aria-hidden="true" /></button></div></section>
 }
 
 function SearchView({ copy, filter, visibleResults, onFilter, onChoose, onAnnounce }: { copy: Record<string, string>; filter: ResultFilter; visibleResults: TrainResult[]; onFilter: (filter: ResultFilter) => void; onChoose: (train: TrainResult) => void; onAnnounce: (message: string) => void }) {

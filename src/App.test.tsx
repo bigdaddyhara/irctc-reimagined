@@ -4,6 +4,15 @@ import { describe, expect, it } from 'vitest'
 import App from './App'
 
 describe('YatraSaathi passenger journey', () => {
+  it('presents the booking experience as a public mobile website', () => {
+    render(<App />)
+    expect(screen.getByRole('banner')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /yatrasaathi/i })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: /main website navigation/i })).toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: /primary navigation/i })).not.toBeInTheDocument()
+    expect(screen.getByText(/built for simpler journeys/i)).toBeInTheDocument()
+  })
+
   it('starts with a simple task-focused train search', () => {
     render(<App />)
 
