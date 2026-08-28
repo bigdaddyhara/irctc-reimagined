@@ -2,6 +2,10 @@
 
 This is a frontend-only IRCTC redesign prototype for the Varun Mayya hackathon. It turns the railway booking experience into a guided journey: discover a route, compare trains, understand availability, book a mock ticket, monitor the trip, and recover from disruptions.
 
+## Live demo
+
+[Open IRCTC Reimagined on Vercel](https://irctc-rework.vercel.app)
+
 ## Planning documents
 
 - [Frontend Master Plan](./docs/IRCTC_REIMAGINED_MASTER_PLAN.md) — product definition, phased development plan, feature priorities, architecture boundary, QA, and production roadmap.
