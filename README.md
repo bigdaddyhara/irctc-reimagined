@@ -1,6 +1,6 @@
-# YatraSaathi — IRCTC Reimagined
+# Indian Railways — IRCTC Reimagined
 
-YatraSaathi is a frontend-only IRCTC redesign prototype for the Varun Mayya hackathon. It turns the railway booking experience into a guided journey: discover a route, compare trains, understand availability, book a mock ticket, monitor the trip, and recover from disruptions.
+This is a frontend-only IRCTC redesign prototype for the Varun Mayya hackathon. It turns the railway booking experience into a guided journey: discover a route, compare trains, understand availability, book a mock ticket, monitor the trip, and recover from disruptions.
 
 The project intentionally uses synthetic data and simulated actions. It does not connect to IRCTC, process real payments, or make live availability claims.
 

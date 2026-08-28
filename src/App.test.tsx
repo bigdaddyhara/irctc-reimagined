@@ -1,16 +1,68 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import App from './App'
 
-describe('YatraSaathi passenger journey', () => {
+describe('Indian Railways passenger journey', () => {
   it('presents the booking experience as a public mobile website', () => {
     render(<App />)
     expect(screen.getByRole('banner')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /yatrasaathi/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /indian railways home/i })).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: /main website navigation/i })).toBeInTheDocument()
     expect(screen.queryByRole('complementary', { name: /primary navigation/i })).not.toBeInTheDocument()
+    expect(screen.queryByText(/yatrasaathi/i)).not.toBeInTheDocument()
     expect(screen.getByText(/built for simpler journeys/i)).toBeInTheDocument()
+  })
+
+  it('lets first-time passengers edit the route, date, and class before searching', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.clear(screen.getByRole('textbox', { name: 'Starting station' }))
+    await user.type(screen.getByRole('textbox', { name: 'Starting station' }), 'Mumbai Central')
+    await user.clear(screen.getByRole('textbox', { name: 'Destination station' }))
+    await user.type(screen.getByRole('textbox', { name: 'Destination station' }), 'Pune')
+    const travelDate = screen.getByDisplayValue('2026-08-28')
+    fireEvent.change(travelDate, { target: { value: '2026-09-14' } })
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Travel class' }), 'AC 3 Tier')
+    await user.click(screen.getByRole('button', { name: /find trains/i }))
+
+    expect(screen.getByText(/Mumbai Central to Pune/i)).toBeInTheDocument()
+    expect(screen.getByText(/14 Sept? 2026/i)).toBeInTheDocument()
+    expect(screen.getAllByText('AC 3 Tier').length).toBeGreaterThan(0)
+  })
+
+  it('uses browser speech recognition to fill a spoken route', async () => {
+    const user = userEvent.setup()
+    class FakeSpeechRecognition {
+      static instance: FakeSpeechRecognition
+      onstart?: () => void
+      onend?: () => void
+      onerror?: () => void
+      onresult?: (event: unknown) => void
+
+      constructor() {
+        FakeSpeechRecognition.instance = this
+      }
+
+      start() {
+        this.onstart?.()
+      }
+    }
+
+    vi.stubGlobal('SpeechRecognition', FakeSpeechRecognition)
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: /try speaking/i }))
+
+    expect(screen.getByRole('button', { name: /listening/i })).toBeInTheDocument()
+    FakeSpeechRecognition.instance.onresult?.({ results: [[{ transcript: 'Mumbai to Pune' }]] })
+
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: 'Starting station' })).toHaveValue('Mumbai')
+      expect(screen.getByRole('textbox', { name: 'Destination station' })).toHaveValue('Pune')
+    })
+    expect(screen.getByRole('status')).toHaveTextContent(/check the fields/i)
+    vi.unstubAllGlobals()
   })
 
   it('starts with a simple task-focused train search', () => {
@@ -18,7 +70,7 @@ describe('YatraSaathi passenger journey', () => {
 
     expect(screen.getByRole('heading', { name: /where are you going/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /find trains/i })).toBeInTheDocument()
-    expect(screen.getByText(/mock data only/i)).toBeInTheDocument()
+    expect(screen.queryByText(/yatrasaathi prototype/i)).not.toBeInTheDocument()
   })
 
   it('takes a passenger from search to a confirmed prototype ticket', async () => {
