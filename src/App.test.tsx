@@ -13,6 +13,16 @@ describe('Indian Railways passenger journey', () => {
     expect(screen.getByText(/built for simpler journeys/i)).toBeInTheDocument()
   })
 
+  it('uses native language names and changes visible copy when a language is selected', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: /profile/i }))
+    expect(screen.getByRole('button', { name: 'தமிழ்' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'தமிழ்' }))
+    expect(screen.getByRole('heading', { name: 'சுயவிவரம் மற்றும் விருப்பங்கள்' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'முகப்பு' })).toBeInTheDocument()
+  })
+
   it('lets first-time passengers edit the route, date, and class before searching', async () => {
     const user = userEvent.setup()
     render(<App />)
@@ -29,6 +39,44 @@ describe('Indian Railways passenger journey', () => {
     expect(screen.getByText(/Mumbai Central to Pune/i)).toBeInTheDocument()
     expect(screen.getByText(/14 Sept? 2026/i)).toBeInTheDocument()
     expect(screen.getAllByText('AC 3 Tier').length).toBeGreaterThan(0)
+  })
+
+  it('shows station suggestions and carries the chosen route through the journey', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const fromField = screen.getByRole('textbox', { name: 'Starting station' })
+    await user.clear(fromField)
+    await user.type(fromField, 'Mumbai')
+    await user.click(screen.getByRole('option', { name: 'Mumbai Central' }))
+
+    const toField = screen.getByRole('textbox', { name: 'Destination station' })
+    await user.clear(toField)
+    await user.type(toField, 'Pune')
+    await user.click(screen.getByRole('option', { name: 'Pune' }))
+    await user.click(screen.getByRole('button', { name: /find trains/i }))
+
+    expect(screen.getByText(/Mumbai Central to Pune/i)).toBeInTheDocument()
+    await user.click(within(screen.getByRole('article', { name: /Brindavan Express/i })).getByRole('button', { name: /choose this train/i }))
+    await user.click(screen.getByRole('button', { name: /continue to payment/i }))
+    expect(screen.getByText('Mumbai Central')).toBeInTheDocument()
+    expect(screen.getByText('Pune')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /open journey mode/i }))
+    expect(screen.getByRole('heading', { name: /on the way to Pune/i })).toBeInTheDocument()
+    expect(screen.getByText(/Mumbai Central/)).toBeInTheDocument()
+  })
+
+  it('changes synthetic journey details when the route changes', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    const fromField = screen.getByRole('textbox', { name: 'Starting station' })
+    await user.clear(fromField)
+    await user.type(fromField, 'Jaipur')
+    await user.click(screen.getByRole('option', { name: 'Jaipur' }))
+    await user.click(screen.getByRole('button', { name: /find trains/i }))
+    expect(screen.getByText(/Jaipur to Bengaluru/)).toBeInTheDocument()
+    expect(screen.getByText('₹760')).toBeInTheDocument()
+    expect(screen.queryByText('₹620')).not.toBeInTheDocument()
   })
 
   it('uses browser speech recognition to fill a spoken route', async () => {
