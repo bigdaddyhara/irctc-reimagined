@@ -2,6 +2,11 @@
 
 This is a frontend-only IRCTC redesign prototype for the Varun Mayya hackathon. It turns the railway booking experience into a guided journey: discover a route, compare trains, understand availability, book a mock ticket, monitor the trip, and recover from disruptions.
 
+## Planning documents
+
+- [Frontend Master Plan](./docs/IRCTC_REIMAGINED_MASTER_PLAN.md) — product definition, phased development plan, feature priorities, architecture boundary, QA, and production roadmap.
+- [Development Tracker](./docs/IRCTC_REIMAGINED_DEVELOPMENT_TRACKER.md) — checkboxes, owners, work queue, decision log, risk log, and release gates.
+
 The project intentionally uses synthetic data and simulated actions. It does not connect to IRCTC, process real payments, or make live availability claims.
 
 ## Included prototype flows
@@ -12,7 +17,7 @@ The project intentionally uses synthetic data and simulated actions. It does not
 - Mock passenger/payment flow that generates a prototype ticket and PNR
 - My Trips with a simulated seat-watch update
 - Journey Mode with location, platform, coach, and delay recovery simulation
-- Alerts, profile preferences, Easy Mode, and English/Hindi/Tamil language preview
+- Alerts, profile preferences, Easy Mode, and twelve-language interface support
 - Responsive desktop and mobile layouts with keyboard focus states and reduced-motion support
 
 ## Run locally
