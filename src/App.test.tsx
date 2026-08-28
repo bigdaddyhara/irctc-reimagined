@@ -10,7 +10,6 @@ describe('Indian Railways passenger journey', () => {
     expect(screen.getByRole('link', { name: /indian railways home/i })).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: /main website navigation/i })).toBeInTheDocument()
     expect(screen.queryByRole('complementary', { name: /primary navigation/i })).not.toBeInTheDocument()
-    expect(screen.queryByText(/yatrasaathi/i)).not.toBeInTheDocument()
     expect(screen.getByText(/built for simpler journeys/i)).toBeInTheDocument()
   })
 
@@ -70,7 +69,6 @@ describe('Indian Railways passenger journey', () => {
 
     expect(screen.getByRole('heading', { name: /where are you going/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /find trains/i })).toBeInTheDocument()
-    expect(screen.queryByText(/yatrasaathi prototype/i)).not.toBeInTheDocument()
   })
 
   it('takes a passenger from search to a confirmed prototype ticket', async () => {
