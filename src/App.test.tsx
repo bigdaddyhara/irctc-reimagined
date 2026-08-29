@@ -79,7 +79,7 @@ describe('Indian Railways passenger journey', () => {
     expect(screen.queryByText('Brindavan Express')).not.toBeInTheDocument()
   })
 
-  it('does not reuse trains for an unsupported route', async () => {
+  it('generates four route-specific journeys for an uncovered route', async () => {
     const user = userEvent.setup()
     render(<App />)
     const fromField = screen.getByRole('textbox', { name: 'Starting station' })
@@ -92,7 +92,8 @@ describe('Indian Railways passenger journey', () => {
     await user.click(screen.getByRole('option', { name: 'Mumbai Central' }))
     await user.click(screen.getByRole('button', { name: /find trains/i }))
     expect(screen.queryByText('Brindavan Express')).not.toBeInTheDocument()
-    expect(screen.getByText(/0 journeys/i)).toBeInTheDocument()
+    expect(screen.getByText(/4 journeys/i)).toBeInTheDocument()
+    expect(screen.getByText('Kochi Ernakulam–Mumbai Central Express')).toBeInTheDocument()
   })
 
   it('uses browser speech recognition to fill a spoken route', async () => {

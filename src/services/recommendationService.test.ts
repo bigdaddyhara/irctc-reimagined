@@ -24,4 +24,12 @@ describe('route recommendation service', () => {
     expect(result.results.every((train) => train.className === 'Sleeper')).toBe(true)
     expect(result.results[0].departure).toBe('21:15')
   })
+
+  it('generates four route-specific journeys for an otherwise uncovered station pair', () => {
+    const result = getRecommendations(request({ from: 'Pune', to: 'Bengaluru' }))
+    expect(result.results).toHaveLength(4)
+    expect(new Set(result.results.map((train) => train.name)).size).toBe(4)
+    expect(result.results.every((train) => train.from === 'Pune' && train.to === 'Bengaluru')).toBe(true)
+    expect(result.results.every((train) => /Pune|Bengaluru/i.test(train.name))).toBe(true)
+  })
 })
