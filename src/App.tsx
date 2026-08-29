@@ -31,6 +31,9 @@ import {
   WalletCards,
 } from 'lucide-react'
 import './App.css'
+import { getRecommendations } from './services/recommendationService'
+import { parseJourneyText } from './services/naturalLanguageParser'
+import { createVoiceRecognition } from './services/voiceService'
 
 type VoiceResultEvent = { results: ArrayLike<ArrayLike<{ transcript: string }>> }
 type VoiceRecognition = {
@@ -55,7 +58,7 @@ declare global {
 type View = 'home' | 'search' | 'booking' | 'ticket' | 'trips' | 'journey' | 'alerts' | 'profile'
 type Language = 'english' | 'hindi' | 'bengali' | 'telugu' | 'marathi' | 'tamil' | 'gujarati' | 'kannada' | 'malayalam' | 'odia' | 'punjabi' | 'assamese'
 type ResultFilter = 'best' | 'cheapest' | 'fastest' | 'comfortable'
-type SearchField = 'from' | 'to' | 'date' | 'passengers' | 'className'
+type SearchField = 'from' | 'to' | 'date' | 'passengers' | 'className' | 'timePreference'
 
 type SearchCriteria = {
   from: string
@@ -63,6 +66,7 @@ type SearchCriteria = {
   date: string
   passengers: string
   className: string
+  timePreference: string
 }
 
 type TrainResult = {
@@ -116,7 +120,7 @@ const languageOptions: Array<{ id: Language; label: string }> = [
 
 const classOptions = ['Any class', 'Sleeper', 'AC Chair Car', 'AC 3 Tier', 'First AC']
 const stationOptions = ['Chennai Central', 'Bengaluru', 'Mumbai Central', 'Pune', 'New Delhi', 'Hyderabad Deccan', 'Kolkata Howrah', 'Ahmedabad', 'Jaipur', 'Lucknow', 'Kochi Ernakulam', 'Bhopal', 'Patna', 'Visakhapatnam']
-const defaultSearchCriteria: SearchCriteria = { from: 'Chennai Central', to: 'Bengaluru', date: '2026-08-28', passengers: '1 adult', className: 'Any class' }
+const defaultSearchCriteria: SearchCriteria = { from: 'Chennai Central', to: 'Bengaluru', date: '2026-08-28', passengers: '1 adult', className: 'Any class', timePreference: 'Any time' }
 const languageCopy: Record<Language, Record<string, string>> = {
   english: { home: 'Home', search: 'Search trains', resultsTitle: 'Trains for your journey', trips: 'My trips', alerts: 'Alerts', profile: 'Profile', where: 'Where are you going?', find: 'Find trains', companion: 'Simple train travel', from: 'From', to: 'To', date: 'Travel date', passengers: 'Passengers', className: 'Class', fromHint: 'Starting station', toHint: 'Destination station', tip: 'Tip: try “Mumbai to Pune”.', nextJourney: 'Your next journey', nextJourneyCaption: 'We’ll keep the important details close by.', seeAllTrips: 'See all trips', quickActions: 'Quick actions', quickActionsCaption: 'Common tasks, one tap away.', findTrain: 'Find a train', findTrainCaption: 'Compare your options', checkTicket: 'Check a ticket', checkTicketCaption: 'See your journey status', viewAlerts: 'View alerts', viewAlertsCaption: '2 updates for you', built: 'Built for simpler journeys', important: 'The important bits, without the railway jargon.', profileTitle: 'Profile & preferences', profileLede: 'Adjust the experience to match how you travel.', easyMode: 'Easy Mode', easyDescription: 'Larger text, simpler words, bigger controls', language: 'Language', languageDescription: 'Choose a language', about: 'About this website', aboutText: 'This website makes railway information easier to understand and act on.', savedPassengers: 'Saved passengers', manage: 'Manage', trustFirst: 'Trust first', trustText: 'Demo data only. No real railway booking or payment is connected.' },
   hindi: { home: 'होम', search: 'ट्रेन खोजें', trips: 'मेरी यात्राएँ', alerts: 'सूचनाएँ', profile: 'प्रोफ़ाइल', where: 'आप कहाँ जा रहे हैं?', find: 'ट्रेन खोजें', companion: 'सरल ट्रेन यात्रा', from: 'कहाँ से', to: 'कहाँ तक', date: 'यात्रा की तारीख', passengers: 'यात्री', className: 'क्लास', fromHint: 'शुरुआती स्टेशन', toHint: 'गंतव्य स्टेशन', tip: 'सुझाव: “मुंबई से पुणे” बोलकर देखें।', nextJourney: 'आपकी अगली यात्रा', nextJourneyCaption: 'ज़रूरी जानकारी यहीं मिलेगी।', seeAllTrips: 'सभी यात्राएँ', quickActions: 'त्वरित काम', quickActionsCaption: 'आम काम, एक टैप में।', findTrain: 'ट्रेन खोजें', findTrainCaption: 'विकल्पों की तुलना करें', checkTicket: 'टिकट देखें', checkTicketCaption: 'यात्रा की स्थिति देखें', viewAlerts: 'सूचनाएँ देखें', viewAlertsCaption: 'आपके लिए 2 अपडेट', built: 'सरल यात्रा के लिए बनाया गया', important: 'ज़रूरी बातें, कठिन रेलवे शब्दों के बिना।', profileTitle: 'प्रोफ़ाइल और पसंद', profileLede: 'यात्रा के अनुसार अनुभव बदलें।', easyMode: 'आसान मोड', easyDescription: 'बड़ा टेक्स्ट, सरल शब्द, बड़े बटन', language: 'भाषा', languageDescription: 'भाषा चुनें', about: 'इस वेबसाइट के बारे में', aboutText: 'यह वेबसाइट रेलवे की जानकारी को समझना और उपयोग करना आसान बनाती है।', savedPassengers: 'सहेजे गए यात्री', manage: 'प्रबंधित करें', trustFirst: 'भरोसा पहले', trustText: 'सिर्फ डेमो डेटा। असली बुकिंग या भुगतान जुड़ा नहीं है।' },
@@ -185,12 +189,6 @@ function buildTrainResults(criteria: SearchCriteria) {
   })
 }
 
-function parseVoiceRoute(transcript: string) {
-  const cleaned = transcript.replace(/[?.]/g, '').trim()
-  const route = cleaned.match(/from\s+(.+?)\s+to\s+(.+)/i) ?? cleaned.match(/^(.+?)\s+to\s+(.+)$/i)
-  return route ? { from: route[1].trim(), to: route[2].trim() } : undefined
-}
-
 function App() {
   const [view, setView] = useState<View>('home')
   const [filter, setFilter] = useState<ResultFilter>('best')
@@ -217,14 +215,17 @@ function App() {
   }
 
   const visibleResults = useMemo(() => {
-    const results = buildTrainResults(searchedCriteria)
+    const recommendationResults = getRecommendations({ from: searchedCriteria.from, to: searchedCriteria.to, travelDate: searchedCriteria.date, timePreference: searchedCriteria.timePreference === 'Any time' ? undefined : searchedCriteria.timePreference.toLocaleLowerCase().replace(' ', '-') as 'early-morning' | 'morning' | 'afternoon' | 'evening' | 'night', className: searchedCriteria.className, passengers: Number.parseInt(searchedCriteria.passengers, 10) || 1, source: 'typed', language }).results
+    const legacyRouteKey = `${searchedCriteria.from.toLowerCase()}|${searchedCriteria.to.toLowerCase()}`
+    const sourceResults = routeAdjustments[legacyRouteKey] ? buildTrainResults(searchedCriteria) : recommendationResults.length ? recommendationResults : buildTrainResults(searchedCriteria)
+    const results = sourceResults
     if (filter === 'best') return results
     return [...results].sort((first, second) => {
       if (filter === 'cheapest') return first.fare - second.fare
       if (filter === 'fastest') return first.duration.localeCompare(second.duration)
       return Number(second.availability === 'available') - Number(first.availability === 'available')
     })
-  }, [filter, searchedCriteria])
+  }, [filter, searchedCriteria, language])
 
   const updateSearchField = (field: SearchField, value: string) => {
     setSearchCriteria((current) => ({ ...current, [field]: value }))
@@ -242,48 +243,18 @@ function App() {
   }
 
   const handleVoiceSearch = () => {
-    const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition
-    if (!Recognition) {
-      setToast('Voice input is unavailable here. Type the route below instead.')
-      return
-    }
-
-    const recognition = new Recognition()
-    recognition.lang = 'en-IN'
-    recognition.interimResults = false
-    recognition.maxAlternatives = 1
-    recognition.onstart = () => setVoiceListening(true)
-    recognition.onend = () => setVoiceListening(false)
-    recognition.onerror = () => {
-      setVoiceListening(false)
-      setToast('We could not hear that. Please try again or type your stations.')
-    }
-    recognition.onresult = (event) => {
-      const transcript = event.results[0]?.[0]?.transcript ?? ''
-      const route = parseVoiceRoute(transcript)
-      setVoiceListening(false)
-      if (!route) {
-        setToast('Please say your route like “Mumbai to Pune”.')
-        return
-      }
-      setSearchCriteria((current) => ({ ...current, ...route }))
-      setToast(`Heard “${transcript}”. Check the fields, then find trains.`)
-    }
-    try {
-      recognition.start()
-    } catch {
-      setVoiceListening(false)
-      setToast('Voice search could not start. Please type your stations instead.')
-    }
+    const controller = createVoiceRecognition({ language, onStart: () => setVoiceListening(true), onEnd: () => setVoiceListening(false), onError: () => { setVoiceListening(false); setToast('We could not hear that. Please type your route instead.') }, onTranscript: (transcript) => { const parsed = parseJourneyText(transcript, language, { travelDate: searchCriteria.date, className: searchCriteria.className, passengers: Number.parseInt(searchCriteria.passengers, 10) || 1 }); setVoiceListening(false); if (!parsed.requestPatch.from || !parsed.requestPatch.to) { setVoiceDraft(transcript); setToast('We heard you. Please check the route fields below.'); return } setSearchCriteria((current) => ({ ...current, from: parsed.requestPatch.from ?? current.from, to: parsed.requestPatch.to ?? current.to, date: parsed.requestPatch.travelDate ?? current.date })); setToast(`${parsed.message} Check the fields, then find trains.`) } })
+    if (!controller.isSupported) { setToast('Voice input is unavailable here. Type the route below instead.'); return }
+    try { controller.start() } catch { setVoiceListening(false); setToast('Voice search could not start. Please type your stations instead.') }
   }
 
   const applyVoiceDraft = () => {
-    const route = parseVoiceRoute(voiceDraft)
-    if (!route) {
+    const parsed = parseJourneyText(voiceDraft, language, { travelDate: searchCriteria.date, className: searchCriteria.className, passengers: Number.parseInt(searchCriteria.passengers, 10) || 1 })
+    if (!parsed.requestPatch.from || !parsed.requestPatch.to) {
       setToast('Try a route like “Mumbai to Pune”.')
       return
     }
-    setSearchCriteria((current) => ({ ...current, ...route }))
+    setSearchCriteria((current) => ({ ...current, from: parsed.requestPatch.from ?? current.from, to: parsed.requestPatch.to ?? current.to, date: parsed.requestPatch.travelDate ?? current.date }))
     setVoiceDraft('')
     setToast('Route added. Check the fields, then find trains.')
   }

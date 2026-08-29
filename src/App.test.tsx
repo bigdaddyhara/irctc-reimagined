@@ -105,7 +105,7 @@ describe('Indian Railways passenger journey', () => {
     FakeSpeechRecognition.instance.onresult?.({ results: [[{ transcript: 'Mumbai to Pune' }]] })
 
     await waitFor(() => {
-      expect(screen.getByRole('textbox', { name: 'Starting station' })).toHaveValue('Mumbai')
+      expect(screen.getByRole('textbox', { name: 'Starting station' })).toHaveValue('Mumbai Central')
       expect(screen.getByRole('textbox', { name: 'Destination station' })).toHaveValue('Pune')
     })
     expect(screen.getByRole('status')).toHaveTextContent(/check the fields/i)
