@@ -8,7 +8,7 @@ Use this document as the team’s working checklist during the hackathon. The de
 - Use `🔄` for work in progress and `⛔` for blocked work.
 - Add evidence links, screenshots, test notes, or decisions in the Notes column.
 - Do not move to a dependent phase just because the implementation has started.
-- Keep the frontend-only boundary visible: backend behavior, railway data, payment, alerts, and operations are simulated.
+- Keep the synthetic boundary visible: railway data, payment, credentials, alerts, queue admission, and operations are simulated.
 
 ## Project status
 
@@ -16,10 +16,10 @@ Use this document as the team’s working checklist during the hackathon. The de
 |---|---|
 | Project | IRCTC Reimagined |
 | Product | Mobile-first Indian Railways journey website |
-| Scope | Frontend only; deterministic mocked services and synthetic data |
-| Current phase | Phase 28 — Deployment / Phase 29 — Demo preparation |
+| Scope | Mobile-first website with deterministic synthetic services, Vercel API routes, and synthetic data |
+| Current phase | Phase 24 — Integration boundary / Phase 28 — Deployment |
 | Overall status | 🔄 Active prototype development |
-| Demo URL | `http://127.0.0.1:5173/` during local development |
+| Demo URL | `https://irctc-rework.vercel.app` |
 | Repository | `https://github.com/bigdaddyhara/irctc-reimagined` |
 | Demo route | Use one prepared route plus one alternate route |
 | Last reviewed | 2026-08-28 |
@@ -280,4 +280,3 @@ Record decisions that affect scope, behavior, trust, or the demo. Do not silentl
 - [ ] Presentation owner assigned: `____________________`.
 - [ ] Demo operator assigned: `____________________`.
 - [ ] Backup operator assigned: `____________________`.
-
