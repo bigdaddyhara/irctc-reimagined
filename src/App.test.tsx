@@ -15,6 +15,18 @@ describe('Indian Railways passenger journey', () => {
     expect(screen.getByText(/built for simpler journeys/i)).toBeInTheDocument()
   })
 
+  it('lets passengers switch between light and dark mode', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: 'Use dark mode' }))
+    expect(document.documentElement.dataset.theme).toBe('dark')
+    expect(screen.getByRole('button', { name: 'Use light mode' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Use light mode' }))
+    expect(document.documentElement.dataset.theme).toBe('light')
+  })
+
   it('uses native language names and changes visible copy when a language is selected', async () => {
     const user = userEvent.setup()
     render(<App />)

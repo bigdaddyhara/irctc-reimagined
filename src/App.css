@@ -24,6 +24,28 @@
   --shadow-soft: 0 15px 35px rgba(16, 42, 67, .07);
 }
 
+html[data-theme='dark'] {
+  --ink: #e8f0fb;
+  --ink-muted: #9eb3ca;
+  --ink-faint: #71869e;
+  --paper: #0b1422;
+  --surface: #111f31;
+  --line: #263b52;
+  --line-strong: #38516b;
+  --accent: #5b8cff;
+  --accent-dark: #7ca4ff;
+  --accent-wash: #172b4a;
+  --mint: #153c3b;
+  --mint-ink: #8fe3bd;
+  --blue-wash: #152943;
+  --blue-ink: #a8c7ff;
+  --warning: #3c2e17;
+  --warning-ink: #f3c76b;
+  --danger: #421f25;
+  --danger-ink: #ffaaa9;
+  --shadow-soft: 0 18px 45px rgba(0, 0, 0, .24);
+}
+
 .app-shell { display: flex; min-height: 100vh; background: var(--paper); color: var(--ink); }
 .skip-link { position: fixed; top: -60px; left: 18px; z-index: 10; padding: 10px 14px; border-radius: 8px; background: var(--ink); color: #fff; text-decoration: none; }
 .skip-link:focus { top: 16px; }
@@ -349,9 +371,9 @@
 }
 
 /* Public website direction: mobile-first, with the booking flow inside a calm service site. */
-.app-shell { display: block; min-height: 100vh; background: #f7f8fa; }
+.app-shell { display: block; min-height: 100vh; background: var(--paper); }
 .main-column { display: block; min-height: 100vh; }
-.site-header { position: relative; display: block; min-height: 0; padding: 0; border-bottom: 1px solid var(--line); background: rgba(255, 255, 255, .96); }
+.site-header { position: relative; display: block; min-height: 0; padding: 0; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 96%, transparent); }
 .site-header-inner { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; width: min(100%, 1180px); margin: 0 auto; padding: 13px 18px 0; }
 .brand { display: inline-flex; width: fit-content; align-items: center; gap: 10px; padding: 0; color: var(--ink); text-decoration: none; }
 .brand-mark { width: 35px; height: 35px; border-radius: 11px; }
@@ -367,6 +389,8 @@
 .primary-nav button[aria-current='page']::after { content: ''; position: absolute; right: 10px; bottom: 0; left: 10px; height: 3px; border-radius: 3px 3px 0 0; background: var(--accent); }
 .primary-nav em { width: 16px; height: 16px; border-radius: 5px; margin-left: 1px; background: var(--accent-wash); color: var(--accent-dark); font-size: 9px; }
 .header-actions { display: flex; align-items: center; gap: 8px; }
+.theme-toggle { display: inline-grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--ink-muted); }
+.theme-toggle:hover { border-color: var(--accent); color: var(--accent-dark); background: var(--accent-wash); }
 .header-help { display: none; align-items: center; gap: 5px; min-height: 34px; border: 0; padding: 0 5px; background: transparent; color: var(--ink-muted); font-size: 11px; font-weight: 800; }
 .header-help:hover { color: var(--accent-dark); }
 .profile-chip { gap: 0; min-height: 34px; padding: 0; }
@@ -445,6 +469,25 @@
 .toast { right: 15px; bottom: 18px; left: 15px; max-width: none; }
 .content-area button:focus-visible, .content-area input:focus-visible, .content-area select:focus-visible, .site-header button:focus-visible, .site-header a:focus-visible { outline: 3px solid rgba(37, 99, 235, .42); outline-offset: 2px; }
 .voice-button.listening { border-style: solid; border-color: var(--accent); background: var(--accent); color: #fff; box-shadow: 0 0 0 4px rgba(37, 99, 235, .14); }
+
+/* Dark mode keeps the information architecture intact while lowering glare. */
+html[data-theme='dark'] .field-control,
+html[data-theme='dark'] .suggestion-list,
+html[data-theme='dark'] .voice-fallback,
+html[data-theme='dark'] .voice-fallback-controls input,
+html[data-theme='dark'] .auth-dialog,
+html[data-theme='dark'] .language-buttons button { background: var(--surface); color: var(--ink); }
+html[data-theme='dark'] .field-control input,
+html[data-theme='dark'] .field-control select,
+html[data-theme='dark'] .voice-fallback-controls input { color: var(--ink); }
+html[data-theme='dark'] .field-control input[type='date'] { color-scheme: dark; }
+html[data-theme='dark'] .site-header { box-shadow: 0 8px 22px rgba(0, 0, 0, .12); }
+html[data-theme='dark'] .next-trip-card { background: #08111e; box-shadow: 0 17px 38px rgba(0, 0, 0, .28); }
+html[data-theme='dark'] .trust-box span { color: var(--mint-ink); }
+html[data-theme='dark'] .info-strip strong { color: var(--warning-ink); }
+html[data-theme='dark'] .auth-backdrop { background: rgba(2, 8, 16, .78); }
+html[data-theme='dark'] .light-button { border-color: var(--line-strong); background: #182b43; color: #e8f0fb; }
+html[data-theme='dark'] .passenger-option.selected { background: #14352f; }
 
 @media (min-width: 700px) {
   .site-header-inner { grid-template-columns: auto minmax(0, 1fr) auto; gap: 30px; padding: 16px 28px 0; }
