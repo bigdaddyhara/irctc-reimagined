@@ -1,4 +1,5 @@
 import { routeFamilies, trains } from '../data/index.js'
+import { stations } from '../data/stations.js'
 import type { JourneyRequest, RecommendationResponse, Train } from '../domain/types.js'
 
 const minutes = (value: string) => { const [hours, mins] = value.split(':').map(Number); return hours * 60 + mins }
@@ -27,20 +28,25 @@ const routeNumber = (from: string, to: string, index: number) => {
  * clearly synthetic journeys, but each one is derived from the requested
  * endpoints so the UI never presents an unrelated train for a route.
  */
-export const generateRouteTrains = (request: JourneyRequest): Train[] => {
+export const generateConnectingTrains = (request: JourneyRequest, count = 4): Train[] => {
   const { from, to } = request
-  const label = `${from}–${to}`
+  const eligibleInterchanges = stations.filter((station) => {
+    const normalized = normalizeStationName(station.name)
+    return normalized !== normalizeStationName(from) && normalized !== normalizeStationName(to)
+  })
   const classes = request.className === 'Any class' ? ['AC 3 Tier', 'AC Chair Car', 'Sleeper', 'Second Sitting'] : Array(4).fill(request.className)
   const options = [
-    { suffix: 'Express', departure: '05:45', arrival: '11:10', duration: '5h 25m', fare: 540, availability: 'available' as const, seats: 28, tags: ['Direct', 'Good availability'], reason: 'A reliable morning option for this route' },
-    { suffix: 'Intercity', departure: '08:20', arrival: '14:05', duration: '5h 45m', fare: 430, availability: 'available' as const, seats: 42, tags: ['Direct', 'Lowest fare'], reason: 'A lower-cost direct option for this route' },
-    { suffix: 'Superfast', departure: '14:10', arrival: '19:20', duration: '5h 10m', fare: 720, availability: 'waitlist' as const, waitlist: 5, probability: 78, tags: ['Direct', 'Waitlist explained'], reason: 'The fastest option, with a short waiting list' },
-    { suffix: 'Night Service', departure: '21:30', arrival: '04:50', duration: '7h 20m', fare: 390, availability: 'available' as const, seats: 19, tags: ['Direct', 'Overnight'], reason: 'An overnight option that saves daytime travel' },
+    { suffix: 'Connector', departure: '05:45', arrival: '13:10', duration: '7h 25m', fare: 540, availability: 'available' as const, seats: 28, tags: ['1 change', 'Protected transfer'], reason: 'A reliable morning connection for this route' },
+    { suffix: 'Intercity Link', departure: '08:20', arrival: '16:05', duration: '7h 45m', fare: 430, availability: 'available' as const, seats: 42, tags: ['1 change', 'Lowest fare'], reason: 'A lower-cost connection for this route' },
+    { suffix: 'Superfast Link', departure: '14:10', arrival: '21:20', duration: '7h 10m', fare: 720, availability: 'waitlist' as const, waitlist: 5, probability: 78, tags: ['1 change', 'Waitlist explained'], reason: 'The fastest connection, with a short waiting list' },
+    { suffix: 'Night Connector', departure: '21:30', arrival: '06:50', duration: '9h 20m', fare: 390, availability: 'available' as const, seats: 19, tags: ['1 change', 'Overnight'], reason: 'An overnight connection that saves daytime travel' },
   ]
 
-  return options.map((option, index) => ({
-    id: `synthetic-${routeKey(from, to)}-${index + 1}`,
-    name: `${label} ${option.suffix}`,
+  return options.slice(0, count).map((option, index) => {
+    const interchange = eligibleInterchanges[(index * 7 + from.length + to.length) % eligibleInterchanges.length]
+    return {
+    id: `connecting-${routeKey(from, to)}-${index + 1}`,
+    name: `${from}–${to} via ${interchange.name} ${option.suffix}`,
     number: routeNumber(from, to, index),
     from,
     to,
@@ -55,7 +61,12 @@ export const generateRouteTrains = (request: JourneyRequest): Train[] => {
     probability: option.probability,
     tags: option.tags,
     reason: option.reason,
-  }))
+    transferStation: interchange.name,
+    legs: [
+      { from, to: interchange.name, departure: option.departure, arrival: '09:05', duration: '3h 20m' },
+      { from: interchange.name, to, departure: '10:05', arrival: option.arrival, duration: option.duration },
+    ],
+  }})
 }
 
 export const findDirectTrains = (request: JourneyRequest) => trains.filter((train) => normalizeStationName(train.from) === normalizeStationName(request.from) && normalizeStationName(train.to) === normalizeStationName(request.to) && !train.transferStation && compatible(train, request)).sort((a, b) => score(a, request) - score(b, request))
@@ -66,10 +77,11 @@ export const getRecommendations = (request: JourneyRequest): RecommendationRespo
   const directResults = findDirectTrains(request)
   const connectingResults = findConnectingTrains(request)
   const knownResults = directResults.length ? directResults : connectingResults
-  const results = knownResults.length ? knownResults : generateRouteTrains(request).filter((train) => compatible(train, request))
+  const connectingNeeded = Math.max(0, 4 - knownResults.length)
+  const results = [...knownResults, ...generateConnectingTrains(request, connectingNeeded)].filter((train) => compatible(train, request))
   const family = routeFamilies.find((item) => normalizeStationName(item.from) === normalizeStationName(request.from) && normalizeStationName(item.to) === normalizeStationName(request.to))
-  const generated = knownResults.length === 0
-  const directAvailable = directResults.length > 0 || generated
-  const summary = generated ? `${results.length} route-specific demo journeys found for your journey` : directAvailable ? `${results.length} direct train${results.length === 1 ? '' : 's'} found for your journey` : family && !family.direct ? 'No direct trains found. Here is the safest one-change option.' : 'No direct train matches this class or time. Here are the closest options.'
+  const generated = connectingNeeded > 0
+  const directAvailable = directResults.length > 0
+  const summary = generated && directAvailable ? `${directResults.length} direct and ${results.length - directResults.length} connecting demo journeys found` : generated ? `No direct trains found. Here are ${results.length} connecting demo journeys.` : directAvailable ? `${results.length} direct train${results.length === 1 ? '' : 's'} found for your journey` : family && !family.direct ? 'No direct trains found. Here is the safest one-change option.' : 'No direct train matches this class or time. Here are the closest options.'
   return { directAvailable, results, summary, suggestions: directAvailable ? [] : ['Try a nearby station', 'Try a different class', 'Choose a wider time window'], searchReference: { id: `search-${Date.now()}`, request, createdAt: new Date().toISOString() } }
 }

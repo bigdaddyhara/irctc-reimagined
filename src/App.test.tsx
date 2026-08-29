@@ -93,7 +93,7 @@ describe('Indian Railways passenger journey', () => {
     await user.click(screen.getByRole('button', { name: /find trains/i }))
     expect(screen.queryByText('Brindavan Express')).not.toBeInTheDocument()
     expect(screen.getByText(/4 journeys/i)).toBeInTheDocument()
-    expect(screen.getByText('Kochi Ernakulam–Mumbai Central Express')).toBeInTheDocument()
+    expect(screen.getAllByText(/Kochi Ernakulam–Mumbai Central via/)).toHaveLength(4)
   })
 
   it('uses browser speech recognition to fill a spoken route', async () => {
