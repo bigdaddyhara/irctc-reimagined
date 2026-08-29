@@ -136,6 +136,22 @@ describe('Indian Railways passenger journey', () => {
     expect(screen.getByRole('button', { name: /find trains/i })).toBeInTheDocument()
   })
 
+  it('opens a service workflow, validates it, and returns a reference', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: /^services$/i }))
+    expect(screen.getByRole('heading', { name: /services & help/i })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /refund for delay or cancellation/i }))
+    await user.click(screen.getByRole('button', { name: /review and submit/i }))
+    expect(screen.getByRole('alert')).toHaveTextContent(/booking or pnr reference is required/i)
+    await user.type(screen.getByRole('textbox', { name: /booking or pnr reference/i }), 'PNR48271930')
+    await user.type(screen.getByRole('textbox', { name: /what happened/i }), 'Train delayed by 90 minutes')
+    fireEvent.change(screen.getByPlaceholderText('Choose a date'), { target: { value: '2026-08-29' } })
+    await user.click(screen.getByRole('button', { name: /review and submit/i }))
+    expect(screen.getByRole('heading', { name: /your request is in the demo queue/i })).toBeInTheDocument()
+    expect(screen.getByText(/^DELAYREFUND-/)).toBeInTheDocument()
+  })
+
   it('takes a passenger from search to a confirmed prototype ticket', async () => {
     const user = userEvent.setup()
     render(<App />)

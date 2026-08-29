@@ -17,6 +17,7 @@ import {
   Home,
   Info,
   Languages,
+  LifeBuoy,
   LocateFixed,
   MapPin,
   Mic,
@@ -35,6 +36,9 @@ import { getRecommendations } from './services/recommendationService'
 import { parseJourneyText } from './services/naturalLanguageParser'
 import { createVoiceRecognition } from './services/voiceService'
 import { getStoredSession, loginDemo, logoutDemo, saveSession, signupDemo } from './services/authService'
+import { getServiceHistory, submitServiceRequest, type ServiceRequest } from './services/serviceWorkflow'
+import { serviceDefinitions, type ServiceId } from './data/services'
+import { searchFoundItems } from './services/serviceWorkflow'
 
 type VoiceResultEvent = { results: ArrayLike<ArrayLike<{ transcript: string }>> }
 type VoiceRecognition = {
@@ -56,7 +60,7 @@ declare global {
   }
 }
 
-type View = 'home' | 'search' | 'booking' | 'ticket' | 'trips' | 'journey' | 'alerts' | 'profile'
+type View = 'home' | 'search' | 'services' | 'booking' | 'ticket' | 'trips' | 'journey' | 'alerts' | 'profile'
 type Language = 'english' | 'hindi' | 'bengali' | 'telugu' | 'marathi' | 'tamil' | 'gujarati' | 'kannada' | 'malayalam' | 'odia' | 'punjabi' | 'assamese'
 type ResultFilter = 'best' | 'cheapest' | 'fastest' | 'comfortable'
 type SearchField = 'from' | 'to' | 'date' | 'passengers' | 'className' | 'timePreference'
@@ -99,6 +103,7 @@ const trainResults: TrainResult[] = [
 const navItems: Array<{ id: View; label: string; icon: typeof Home }> = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'search', label: 'Search trains', icon: Search },
+  { id: 'services', label: 'Services', icon: LifeBuoy },
   { id: 'trips', label: 'My trips', icon: Ticket },
   { id: 'alerts', label: 'Alerts', icon: Bell },
   { id: 'profile', label: 'Profile', icon: CircleUserRound },
@@ -179,6 +184,7 @@ function App() {
   const [authOpen, setAuthOpen] = useState(false)
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login')
   const [session, setSession] = useState(() => getStoredSession())
+  const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>(() => getServiceHistory(getStoredSession()?.user.id ?? 'guest'))
   const copy = { ...languageCopy[language], ...languageActions[language] }
 
   useEffect(() => {
@@ -260,15 +266,16 @@ function App() {
       <main id="main-content" className="content-area">
         {view === 'home' && <HomeView copy={copy} criteria={searchCriteria} voiceListening={voiceListening} voiceDraft={voiceDraft} onVoiceSearch={handleVoiceSearch} onVoiceDraftChange={setVoiceDraft} onApplyVoiceDraft={applyVoiceDraft} onChange={updateSearchField} onSearch={handleSearch} onNavigate={goTo} />}
         {view === 'search' && <SearchView copy={copy} criteria={searchCriteria} resultCriteria={searchedCriteria} voiceListening={voiceListening} voiceDraft={voiceDraft} onVoiceSearch={handleVoiceSearch} onVoiceDraftChange={setVoiceDraft} onApplyVoiceDraft={applyVoiceDraft} visibleResults={visibleResults} onChange={updateSearchField} onUpdate={updateResults} filter={filter} onFilter={setFilter} onChoose={chooseTrain} onAnnounce={setToast} />}
+        {view === 'services' && <ServicesView userId={session?.user.id ?? 'guest'} onBack={() => goTo('home')} onSubmitted={(request) => { setServiceRequests(getServiceHistory(request.userId)); setToast(`Request submitted: ${request.reference}`) }} />}
         {view === 'booking' && <BookingView train={selectedTrain} onBack={() => goTo('search')} onComplete={() => { goTo('ticket'); setToast('Booking confirmed in demo mode.') }} />}
         {view === 'ticket' && <TicketView train={selectedTrain} onJourney={() => goTo('journey')} onSave={() => setToast('Ticket saved for offline access on this device.')} />}
         {view === 'trips' && <TripsView train={selectedTrain} seatWatchActive={seatWatchActive} onJourney={() => goTo('journey')} onTicket={() => goTo('ticket')} onSearch={() => goTo('search')} />}
         {view === 'journey' && <JourneyView train={selectedTrain} delayed={delayed} onDelay={() => { setDelayed(true); setToast('Journey updated: a 90-minute delay needs your attention.') }} onAnnounce={setToast} />}
         {view === 'alerts' && <AlertsView train={selectedTrain} delayed={delayed} onJourney={() => goTo('journey')} />}
-        {view === 'profile' && <ProfileView copy={copy} easyMode={easyMode} language={language} userName={session?.user.name} onEasyMode={() => { setEasyMode((current) => !current); setToast(!easyMode ? 'Easy Mode is on.' : 'Easy Mode is off.') }} onLanguage={chooseLanguage} onLogout={() => { logoutDemo(); setSession(null); setToast('You are logged out of the demo.') }} />}
+        {view === 'profile' && <ProfileView copy={copy} easyMode={easyMode} language={language} userName={session?.user.name} serviceRequests={serviceRequests} onEasyMode={() => { setEasyMode((current) => !current); setToast(!easyMode ? 'Easy Mode is on.' : 'Easy Mode is off.') }} onLanguage={chooseLanguage} onLogout={() => { logoutDemo(); setSession(null); setServiceRequests(getServiceHistory('guest')); setToast('You are logged out of the demo.') }} />}
       </main>
     </div>
-    <div className={`toast ${toast ? 'toast-visible' : ''}`} role="status" aria-live="polite">{toast}</div>{authOpen && <AuthDialog mode={authMode} onClose={() => setAuthOpen(false)} onModeChange={setAuthMode} onSuccess={(nextSession) => { saveSession(nextSession); setSession(nextSession); setAuthOpen(false); setToast('You are signed in to the demo.') }} />}
+    <div className={`toast ${toast ? 'toast-visible' : ''}`} role="status" aria-live="polite">{toast}</div>{authOpen && <AuthDialog mode={authMode} onClose={() => setAuthOpen(false)} onModeChange={setAuthMode} onSuccess={(nextSession) => { saveSession(nextSession); setSession(nextSession); setServiceRequests(getServiceHistory(nextSession.user.id)); setAuthOpen(false); setToast('You are signed in to the demo.') }} />}
   </div>
 }
 
@@ -331,8 +338,21 @@ function AlertsView({ train, delayed, onJourney }: { train: TrainResult; delayed
   return <><div className="eyebrow"><Bell size={14} aria-hidden="true" />Only what matters</div><h1>Alerts</h1><p className="lede">Useful updates about your tickets, seats, and journeys.</p><div className="alert-list">{delayed && <AlertItem icon={<CircleAlert size={19} aria-hidden="true" />} title="Your train is delayed by 90 minutes" text="Open Journey Mode to see your options and decide what to do next." time="Just now" tone="danger" action="View journey" onAction={onJourney} />}<AlertItem icon={<BellRing size={19} aria-hidden="true" />} title="Platform 6 confirmed for your journey" text={`${train.name} departs from ${train.from} at ${train.departure} on 29 Aug.`} time="Today · 10:42 AM" /><AlertItem icon={<Eye size={19} aria-hidden="true" />} title="Seat watch is active" text="Kaveri Express is currently full. We’ll notify you if a seat opens up." time="Yesterday · 06:20 PM" tone="blue" /><AlertItem icon={<CircleCheck size={19} aria-hidden="true" />} title="Your booking is confirmed" text={`${train.name} · PNR 4827 1930 · S3, seat 42.`} time="27 Aug · 04:15 PM" tone="green" /></div></>
 }
 
-function ProfileView({ copy, easyMode, language, userName, onEasyMode, onLanguage, onLogout }: { copy: Record<string, string>; easyMode: boolean; language: Language; userName?: string; onEasyMode: () => void; onLanguage: (language: Language) => void; onLogout: () => void }) {
-  return <><div className="eyebrow"><Accessibility size={14} aria-hidden="true" />{copy.profile}</div><h1>{copy.profileTitle}</h1><p className="lede">{copy.profileLede}</p>{userName ? <div className="signed-in-card"><span className="avatar">{userName.slice(0, 2).toUpperCase()}</span><div><strong>{userName}</strong><span>Signed in to demo account</span></div><button className="text-button" type="button" onClick={onLogout}>Log out</button></div> : <div className="signed-in-card"><div><strong>You are browsing as a guest</strong><span>Log in to save passengers and preferences.</span></div></div>}<div className="profile-layout"><section className="panel preferences-panel"><PreferenceRow title={copy.easyMode} description={copy.easyDescription}><button className={`toggle ${easyMode ? 'on' : ''}`} type="button" aria-pressed={easyMode} aria-label="Toggle Easy Mode" onClick={onEasyMode}><i /></button></PreferenceRow><PreferenceRow title={copy.language} description={copy.languageDescription}><div className="language-buttons" role="group" aria-label={copy.language}>{languageOptions.map((option) => <button className={language === option.id ? 'selected' : ''} type="button" key={option.id} onClick={() => onLanguage(option.id)}>{option.label}</button>)}</div></PreferenceRow><PreferenceRow title={copy.savedPassengers} description={userName ?? 'Guest'}><button className="text-button" type="button">{copy.manage}</button></PreferenceRow></section><section className="panel about-panel"><div className="about-symbol"><Languages size={21} aria-hidden="true" /></div><h2>{copy.about}</h2><p>{copy.aboutText}</p><div className="trust-box"><ShieldCheck size={18} aria-hidden="true" /><div><strong>{copy.trustFirst}</strong><span>{copy.trustText}</span></div></div></section></div></>
+function ProfileView({ copy, easyMode, language, userName, serviceRequests, onEasyMode, onLanguage, onLogout }: { copy: Record<string, string>; easyMode: boolean; language: Language; userName?: string; serviceRequests: ServiceRequest[]; onEasyMode: () => void; onLanguage: (language: Language) => void; onLogout: () => void }) {
+  return <><div className="eyebrow"><Accessibility size={14} aria-hidden="true" />{copy.profile}</div><h1>{copy.profileTitle}</h1><p className="lede">{copy.profileLede}</p>{userName ? <div className="signed-in-card"><span className="avatar">{userName.slice(0, 2).toUpperCase()}</span><div><strong>{userName}</strong><span>Signed in to demo account</span></div><button className="text-button" type="button" onClick={onLogout}>Log out</button></div> : <div className="signed-in-card"><div><strong>You are browsing as a guest</strong><span>Log in to save passengers and preferences.</span></div></div>}<div className="profile-layout"><section className="panel preferences-panel"><PreferenceRow title={copy.easyMode} description={copy.easyDescription}><button className={`toggle ${easyMode ? 'on' : ''}`} type="button" aria-pressed={easyMode} aria-label="Toggle Easy Mode" onClick={onEasyMode}><i /></button></PreferenceRow><PreferenceRow title={copy.language} description={copy.languageDescription}><div className="language-buttons" role="group" aria-label={copy.language}>{languageOptions.map((option) => <button className={language === option.id ? 'selected' : ''} type="button" key={option.id} onClick={() => onLanguage(option.id)}>{option.label}</button>)}</div></PreferenceRow><PreferenceRow title={copy.savedPassengers} description={userName ?? 'Guest'}><button className="text-button" type="button">{copy.manage}</button></PreferenceRow></section><section className="panel about-panel"><div className="about-symbol"><Languages size={21} aria-hidden="true" /></div><h2>{copy.about}</h2><p>{copy.aboutText}</p><div className="trust-box"><ShieldCheck size={18} aria-hidden="true" /><div><strong>{copy.trustFirst}</strong><span>{copy.trustText}</span></div></div></section></div>{userName && <section className="panel service-history"><div className="panel-heading"><div><h2>My service requests</h2><p>Track your demo support requests here.</p></div><LifeBuoy size={20} aria-hidden="true" /></div>{serviceRequests.length ? serviceRequests.slice(0, 5).map((request) => <div className="service-history-row" key={request.reference}><div><strong>{request.serviceId.replaceAll('-', ' ')}</strong><span>{request.reference}</span></div><em>{request.status.replace('-', ' ')}</em></div>) : <p>No service requests yet.</p>}</section>}</>
+}
+
+function ServicesView({ userId, onBack, onSubmitted }: { userId: string; onBack: () => void; onSubmitted: (request: ServiceRequest) => void }) {
+  const [selectedId, setSelectedId] = useState<ServiceId | null>(null)
+  const [form, setForm] = useState<Record<string, string>>({})
+  const [error, setError] = useState('')
+  const [submitted, setSubmitted] = useState<ServiceRequest | null>(null)
+  const selected = serviceDefinitions.find((service) => service.id === selectedId)
+  const foundMatches = useMemo(() => selectedId === 'lost-found' ? searchFoundItems({ item: form.item, station: form.station, date: form.lostDate }) : [], [form.item, form.lostDate, form.station, selectedId])
+  const update = (key: string, value: string) => setForm((current) => ({ ...current, [key]: value }))
+  const submit = () => { if (!selectedId) return; try { const request = submitServiceRequest(selectedId, form, userId); setSubmitted(request); onSubmitted(request) } catch (nextError) { setError(nextError instanceof Error ? nextError.message : 'Please check the form and try again.') } }
+  if (submitted) return <><button className="back-button" type="button" onClick={() => { setSubmitted(null); setSelectedId(null); setForm({}) }}>← Services & help</button><div className="eyebrow"><CircleCheck size={14} aria-hidden="true" />Request received</div><h1>Your request is in the demo queue</h1><p className="lede">Keep this reference number. Nothing was submitted to a real railway or payment system.</p><section className="panel service-success"><span className="success-mark"><CircleCheck size={26} aria-hidden="true" /></span><h2>{submitted.reference}</h2><p>{submitted.message}</p><div className="next-steps"><strong>What happens next?</strong>{submitted.nextSteps.map((step) => <span key={step}>• {step}</span>)}</div></section><button className="primary-button full-button" type="button" onClick={() => { setSubmitted(null); setSelectedId(null); setForm({}) }}>Start another service</button></>
+  return <><button className="back-button" type="button" onClick={onBack}>← Back to home</button><div className="eyebrow"><LifeBuoy size={14} aria-hidden="true" />Help with your journey</div><h1>Services & help</h1><p className="lede">Choose a task and we’ll guide you one step at a time.</p>{!selected ? <><section className="service-grid">{serviceDefinitions.map((service) => <button className="service-card" type="button" key={service.id} onClick={() => { setSelectedId(service.id); setError('') }}><span className="service-card-icon"><LifeBuoy size={20} aria-hidden="true" /></span><span><strong>{service.title}</strong><small>{service.description}</small></span><ChevronRight size={18} aria-hidden="true" /></button>)}</section><p className="prototype-disclaimer"><ShieldCheck size={14} aria-hidden="true" />Demo service only. No real refund, payment, pass, or lost-item request will be submitted.</p></> : <section className="panel service-form"><button className="back-button" type="button" onClick={() => setSelectedId(null)}>← All services</button><div className="eyebrow">Step 1 of 2</div><h2>{selected.title}</h2><p>{selected.detail}</p>{selected.fields.map((field) => <label className="field" key={field.key}><span>{field.label}</span><input type={field.type ?? 'text'} placeholder={field.placeholder} value={form[field.key] ?? ''} onChange={(event) => update(field.key, event.target.value)} /></label>)}{selectedId === 'lost-found' && <><p className="field-hint">Tip: use “backpack” or “phone” to search our synthetic found-item records.</p>{form.item || form.station ? <div className="found-matches" aria-live="polite">{foundMatches.length ? foundMatches.map((match) => <button type="button" className="found-match" key={match.id} onClick={() => setForm((current) => ({ ...current, item: match.item, station: match.station }))}><strong>{match.item}</strong><span>{match.station} · {match.date}</span></button>) : <p>No matching found items yet. Try fewer words.</p>}</div> : null}</>}{error && <p className="auth-error" role="alert">{error}</p>}<button className="primary-button full-button" type="button" onClick={submit}>Review and submit <ArrowRight size={16} aria-hidden="true" /></button><p className="panel-note"><ShieldCheck size={14} aria-hidden="true" />Your information stays in this demo on this device.</p></section>}</>
 }
 
 function Field({ label, value, icon, ariaLabel, select = false, options = [], suggestions = [], inputType = 'text', onChange, hint }: { label: string; value: string; icon?: ReactNode; ariaLabel: string; select?: boolean; options?: string[]; suggestions?: string[]; inputType?: 'text' | 'date'; onChange?: (value: string) => void; hint?: string }) {
