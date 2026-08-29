@@ -34,6 +34,7 @@ import './App.css'
 import { getRecommendations } from './services/recommendationService'
 import { parseJourneyText } from './services/naturalLanguageParser'
 import { createVoiceRecognition } from './services/voiceService'
+import { getStoredSession, loginDemo, logoutDemo, saveSession, signupDemo } from './services/authService'
 
 type VoiceResultEvent = { results: ArrayLike<ArrayLike<{ transcript: string }>> }
 type VoiceRecognition = {
@@ -202,6 +203,9 @@ function App() {
   const [toast, setToast] = useState('')
   const [voiceListening, setVoiceListening] = useState(false)
   const [voiceDraft, setVoiceDraft] = useState('')
+  const [authOpen, setAuthOpen] = useState(false)
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login')
+  const [session, setSession] = useState(() => getStoredSession())
   const copy = { ...languageCopy[language], ...languageActions[language] }
 
   useEffect(() => {
@@ -279,7 +283,7 @@ function App() {
     <a className="skip-link" href="#main-content">Skip to main content</a>
     <div className="main-column">
       <header className="topbar site-header">
-        <div className="site-header-inner"><Brand onNavigate={() => goTo('home')} /><PrimaryNavigation activeView={view} onNavigate={goTo} copy={copy} /><div className="header-actions"><button className="header-help" type="button" onClick={() => setToast('Help centre preview coming next.')}><Info size={15} aria-hidden="true" />Help</button><button className="profile-chip" type="button" onClick={() => goTo('profile')}><span className="avatar">RK</span><span className="profile-name">Riya Kapoor</span><ChevronRight size={15} aria-hidden="true" /></button></div></div>
+        <div className="site-header-inner"><Brand onNavigate={() => goTo('home')} /><PrimaryNavigation activeView={view} onNavigate={goTo} copy={copy} /><div className="header-actions"><button className="header-help" type="button" onClick={() => setToast('Help centre preview coming next.')}><Info size={15} aria-hidden="true" />Help</button>{session ? <button className="profile-chip" type="button" onClick={() => goTo('profile')}><span className="avatar">{session.user.name.slice(0, 2).toUpperCase()}</span><span className="profile-name">{session.user.name}</span><ChevronRight size={15} aria-hidden="true" /></button> : <button className="secondary-button" type="button" onClick={() => { setAuthMode('login'); setAuthOpen(true) }}>Log in</button>}</div></div>
       </header>
       <main id="main-content" className="content-area">
         {view === 'home' && <HomeView copy={copy} criteria={searchCriteria} voiceListening={voiceListening} voiceDraft={voiceDraft} onVoiceSearch={handleVoiceSearch} onVoiceDraftChange={setVoiceDraft} onApplyVoiceDraft={applyVoiceDraft} onChange={updateSearchField} onSearch={handleSearch} onNavigate={goTo} />}
@@ -289,11 +293,20 @@ function App() {
         {view === 'trips' && <TripsView train={selectedTrain} seatWatchActive={seatWatchActive} onJourney={() => goTo('journey')} onTicket={() => goTo('ticket')} onSearch={() => goTo('search')} />}
         {view === 'journey' && <JourneyView train={selectedTrain} delayed={delayed} onDelay={() => { setDelayed(true); setToast('Journey updated: a 90-minute delay needs your attention.') }} onAnnounce={setToast} />}
         {view === 'alerts' && <AlertsView train={selectedTrain} delayed={delayed} onJourney={() => goTo('journey')} />}
-        {view === 'profile' && <ProfileView copy={copy} easyMode={easyMode} language={language} onEasyMode={() => { setEasyMode((current) => !current); setToast(!easyMode ? 'Easy Mode is on.' : 'Easy Mode is off.') }} onLanguage={chooseLanguage} />}
+        {view === 'profile' && <ProfileView copy={copy} easyMode={easyMode} language={language} userName={session?.user.name} onEasyMode={() => { setEasyMode((current) => !current); setToast(!easyMode ? 'Easy Mode is on.' : 'Easy Mode is off.') }} onLanguage={chooseLanguage} onLogout={() => { logoutDemo(); setSession(null); setToast('You are logged out of the demo.') }} />}
       </main>
     </div>
-    <div className={`toast ${toast ? 'toast-visible' : ''}`} role="status" aria-live="polite">{toast}</div>
+    <div className={`toast ${toast ? 'toast-visible' : ''}`} role="status" aria-live="polite">{toast}</div>{authOpen && <AuthDialog mode={authMode} onClose={() => setAuthOpen(false)} onModeChange={setAuthMode} onSuccess={(nextSession) => { saveSession(nextSession); setSession(nextSession); setAuthOpen(false); setToast('You are signed in to the demo.') }} />}
   </div>
+}
+
+function AuthDialog({ mode, onClose, onModeChange, onSuccess }: { mode: 'login' | 'signup'; onClose: () => void; onModeChange: (mode: 'login' | 'signup') => void; onSuccess: (session: ReturnType<typeof loginDemo>) => void }) {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('demo@irctc-reimagined.test')
+  const [password, setPassword] = useState('demo123')
+  const [error, setError] = useState('')
+  const submit = () => { try { onSuccess(mode === 'login' ? loginDemo({ email, password }) : signupDemo({ name: name || 'Demo Passenger', email, preferredLanguage: 'english' })) } catch (nextError) { setError(nextError instanceof Error ? nextError.message : 'Please try again.') } }
+  return <div className="auth-backdrop" role="dialog" aria-modal="true" aria-labelledby="auth-title"><section className="auth-dialog"><button className="auth-close" type="button" onClick={onClose} aria-label="Close login">×</button><span className="eyebrow">Demo account</span><h2 id="auth-title">{mode === 'login' ? 'Log in' : 'Create your account'}</h2><p>{mode === 'login' ? 'Use the demo details below to continue.' : 'A quick signup for this prototype.'}</p>{mode === 'signup' && <label className="field"><span>Your name</span><input aria-label="Your name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Asha Kumar" /></label>}<label className="field"><span>Email or mobile</span><input aria-label="Email or mobile" value={email} onChange={(event) => setEmail(event.target.value)} /></label>{mode === 'login' && <label className="field"><span>Password</span><input aria-label="Password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></label>}{error && <p className="auth-error" role="alert">{error}</p>}<button className="primary-button full-button" type="button" onClick={submit}>{mode === 'login' ? 'Log in' : 'Create demo account'}</button><button className="text-button" type="button" onClick={() => { setError(''); onModeChange(mode === 'login' ? 'signup' : 'login') }}>{mode === 'login' ? 'New here? Sign up' : 'Already have an account? Log in'}</button><small>Mock account only. No real credentials are stored.</small></section></div>
 }
 
 function Brand({ onNavigate }: { onNavigate?: () => void }) {
@@ -346,8 +359,8 @@ function AlertsView({ train, delayed, onJourney }: { train: TrainResult; delayed
   return <><div className="eyebrow"><Bell size={14} aria-hidden="true" />Only what matters</div><h1>Alerts</h1><p className="lede">Useful updates about your tickets, seats, and journeys.</p><div className="alert-list">{delayed && <AlertItem icon={<CircleAlert size={19} aria-hidden="true" />} title="Your train is delayed by 90 minutes" text="Open Journey Mode to see your options and decide what to do next." time="Just now" tone="danger" action="View journey" onAction={onJourney} />}<AlertItem icon={<BellRing size={19} aria-hidden="true" />} title="Platform 6 confirmed for your journey" text={`${train.name} departs from ${train.from} at ${train.departure} on 29 Aug.`} time="Today · 10:42 AM" /><AlertItem icon={<Eye size={19} aria-hidden="true" />} title="Seat watch is active" text="Kaveri Express is currently full. We’ll notify you if a seat opens up." time="Yesterday · 06:20 PM" tone="blue" /><AlertItem icon={<CircleCheck size={19} aria-hidden="true" />} title="Your booking is confirmed" text={`${train.name} · PNR 4827 1930 · S3, seat 42.`} time="27 Aug · 04:15 PM" tone="green" /></div></>
 }
 
-function ProfileView({ copy, easyMode, language, onEasyMode, onLanguage }: { copy: Record<string, string>; easyMode: boolean; language: Language; onEasyMode: () => void; onLanguage: (language: Language) => void }) {
-  return <><div className="eyebrow"><Accessibility size={14} aria-hidden="true" />{copy.profile}</div><h1>{copy.profileTitle}</h1><p className="lede">{copy.profileLede}</p><div className="profile-layout"><section className="panel preferences-panel"><PreferenceRow title={copy.easyMode} description={copy.easyDescription}><button className={`toggle ${easyMode ? 'on' : ''}`} type="button" aria-pressed={easyMode} aria-label="Toggle Easy Mode" onClick={onEasyMode}><i /></button></PreferenceRow><PreferenceRow title={copy.language} description={copy.languageDescription}><div className="language-buttons" role="group" aria-label={copy.language}>{languageOptions.map((option) => <button className={language === option.id ? 'selected' : ''} type="button" key={option.id} onClick={() => onLanguage(option.id)}>{option.label}</button>)}</div></PreferenceRow><PreferenceRow title={copy.savedPassengers} description="Riya Kapoor"><button className="text-button" type="button">{copy.manage}</button></PreferenceRow></section><section className="panel about-panel"><div className="about-symbol"><Languages size={21} aria-hidden="true" /></div><h2>{copy.about}</h2><p>{copy.aboutText}</p><div className="trust-box"><ShieldCheck size={18} aria-hidden="true" /><div><strong>{copy.trustFirst}</strong><span>{copy.trustText}</span></div></div></section></div></>
+function ProfileView({ copy, easyMode, language, userName, onEasyMode, onLanguage, onLogout }: { copy: Record<string, string>; easyMode: boolean; language: Language; userName?: string; onEasyMode: () => void; onLanguage: (language: Language) => void; onLogout: () => void }) {
+  return <><div className="eyebrow"><Accessibility size={14} aria-hidden="true" />{copy.profile}</div><h1>{copy.profileTitle}</h1><p className="lede">{copy.profileLede}</p>{userName ? <div className="signed-in-card"><span className="avatar">{userName.slice(0, 2).toUpperCase()}</span><div><strong>{userName}</strong><span>Signed in to demo account</span></div><button className="text-button" type="button" onClick={onLogout}>Log out</button></div> : <div className="signed-in-card"><div><strong>You are browsing as a guest</strong><span>Log in to save passengers and preferences.</span></div></div>}<div className="profile-layout"><section className="panel preferences-panel"><PreferenceRow title={copy.easyMode} description={copy.easyDescription}><button className={`toggle ${easyMode ? 'on' : ''}`} type="button" aria-pressed={easyMode} aria-label="Toggle Easy Mode" onClick={onEasyMode}><i /></button></PreferenceRow><PreferenceRow title={copy.language} description={copy.languageDescription}><div className="language-buttons" role="group" aria-label={copy.language}>{languageOptions.map((option) => <button className={language === option.id ? 'selected' : ''} type="button" key={option.id} onClick={() => onLanguage(option.id)}>{option.label}</button>)}</div></PreferenceRow><PreferenceRow title={copy.savedPassengers} description={userName ?? 'Guest'}><button className="text-button" type="button">{copy.manage}</button></PreferenceRow></section><section className="panel about-panel"><div className="about-symbol"><Languages size={21} aria-hidden="true" /></div><h2>{copy.about}</h2><p>{copy.aboutText}</p><div className="trust-box"><ShieldCheck size={18} aria-hidden="true" /><div><strong>{copy.trustFirst}</strong><span>{copy.trustText}</span></div></div></section></div></>
 }
 
 function Field({ label, value, icon, ariaLabel, select = false, options = [], suggestions = [], inputType = 'text', onChange, hint }: { label: string; value: string; icon?: ReactNode; ariaLabel: string; select?: boolean; options?: string[]; suggestions?: string[]; inputType?: 'text' | 'date'; onChange?: (value: string) => void; hint?: string }) {

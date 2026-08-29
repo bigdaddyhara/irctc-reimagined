@@ -475,3 +475,6 @@
   .site-header-inner > .primary-nav { grid-column: 1 / -1; grid-row: 2; }
   .site-header-inner > .header-actions { grid-column: 2; grid-row: 1; }
 }
+.auth-backdrop{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:20px;background:rgba(7,35,70,.48)}
+.auth-dialog{position:relative;width:min(100%,420px);display:grid;gap:14px;padding:28px;border-radius:24px;background:#fff;box-shadow:0 24px 70px rgba(7,35,70,.25)}
+.auth-dialog h2{margin:0;color:#12345b;font-size:32px}.auth-dialog p{margin:0;color:#5d7899}.auth-dialog small{color:#7890aa}.auth-close{position:absolute;top:14px;right:18px;border:0;background:transparent;color:#12345b;font-size:28px;cursor:pointer}.auth-error{color:#b42318!important}.signed-in-card{display:flex;align-items:center;gap:14px;margin:20px 0;padding:16px;border:1px solid #d7e4f2;border-radius:18px;background:#f5f9fe}.signed-in-card>div{display:grid;gap:3px;flex:1}.signed-in-card span:not(.avatar){color:#6683a4;font-size:13px}
