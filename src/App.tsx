@@ -31,6 +31,10 @@ import {
   WalletCards,
 } from 'lucide-react'
 import './App.css'
+import { getRecommendations } from './services/recommendationService'
+import { parseJourneyText } from './services/naturalLanguageParser'
+import { createVoiceRecognition } from './services/voiceService'
+import { getStoredSession, loginDemo, logoutDemo, saveSession, signupDemo } from './services/authService'
 
 type VoiceResultEvent = { results: ArrayLike<ArrayLike<{ transcript: string }>> }
 type VoiceRecognition = {
@@ -55,7 +59,7 @@ declare global {
 type View = 'home' | 'search' | 'booking' | 'ticket' | 'trips' | 'journey' | 'alerts' | 'profile'
 type Language = 'english' | 'hindi' | 'bengali' | 'telugu' | 'marathi' | 'tamil' | 'gujarati' | 'kannada' | 'malayalam' | 'odia' | 'punjabi' | 'assamese'
 type ResultFilter = 'best' | 'cheapest' | 'fastest' | 'comfortable'
-type SearchField = 'from' | 'to' | 'date' | 'passengers' | 'className'
+type SearchField = 'from' | 'to' | 'date' | 'passengers' | 'className' | 'timePreference'
 
 type SearchCriteria = {
   from: string
@@ -63,6 +67,7 @@ type SearchCriteria = {
   date: string
   passengers: string
   className: string
+  timePreference: string
 }
 
 type TrainResult = {
@@ -116,7 +121,7 @@ const languageOptions: Array<{ id: Language; label: string }> = [
 
 const classOptions = ['Any class', 'Sleeper', 'AC Chair Car', 'AC 3 Tier', 'First AC']
 const stationOptions = ['Chennai Central', 'Bengaluru', 'Mumbai Central', 'Pune', 'New Delhi', 'Hyderabad Deccan', 'Kolkata Howrah', 'Ahmedabad', 'Jaipur', 'Lucknow', 'Kochi Ernakulam', 'Bhopal', 'Patna', 'Visakhapatnam']
-const defaultSearchCriteria: SearchCriteria = { from: 'Chennai Central', to: 'Bengaluru', date: '2026-08-28', passengers: '1 adult', className: 'Any class' }
+const defaultSearchCriteria: SearchCriteria = { from: 'Chennai Central', to: 'Bengaluru', date: '2026-08-28', passengers: '1 adult', className: 'Any class', timePreference: 'Any time' }
 const languageCopy: Record<Language, Record<string, string>> = {
   english: { home: 'Home', search: 'Search trains', resultsTitle: 'Trains for your journey', trips: 'My trips', alerts: 'Alerts', profile: 'Profile', where: 'Where are you going?', find: 'Find trains', companion: 'Simple train travel', from: 'From', to: 'To', date: 'Travel date', passengers: 'Passengers', className: 'Class', fromHint: 'Starting station', toHint: 'Destination station', tip: 'Tip: try “Mumbai to Pune”.', nextJourney: 'Your next journey', nextJourneyCaption: 'We’ll keep the important details close by.', seeAllTrips: 'See all trips', quickActions: 'Quick actions', quickActionsCaption: 'Common tasks, one tap away.', findTrain: 'Find a train', findTrainCaption: 'Compare your options', checkTicket: 'Check a ticket', checkTicketCaption: 'See your journey status', viewAlerts: 'View alerts', viewAlertsCaption: '2 updates for you', built: 'Built for simpler journeys', important: 'The important bits, without the railway jargon.', profileTitle: 'Profile & preferences', profileLede: 'Adjust the experience to match how you travel.', easyMode: 'Easy Mode', easyDescription: 'Larger text, simpler words, bigger controls', language: 'Language', languageDescription: 'Choose a language', about: 'About this website', aboutText: 'This website makes railway information easier to understand and act on.', savedPassengers: 'Saved passengers', manage: 'Manage', trustFirst: 'Trust first', trustText: 'Demo data only. No real railway booking or payment is connected.' },
   hindi: { home: 'होम', search: 'ट्रेन खोजें', trips: 'मेरी यात्राएँ', alerts: 'सूचनाएँ', profile: 'प्रोफ़ाइल', where: 'आप कहाँ जा रहे हैं?', find: 'ट्रेन खोजें', companion: 'सरल ट्रेन यात्रा', from: 'कहाँ से', to: 'कहाँ तक', date: 'यात्रा की तारीख', passengers: 'यात्री', className: 'क्लास', fromHint: 'शुरुआती स्टेशन', toHint: 'गंतव्य स्टेशन', tip: 'सुझाव: “मुंबई से पुणे” बोलकर देखें।', nextJourney: 'आपकी अगली यात्रा', nextJourneyCaption: 'ज़रूरी जानकारी यहीं मिलेगी।', seeAllTrips: 'सभी यात्राएँ', quickActions: 'त्वरित काम', quickActionsCaption: 'आम काम, एक टैप में।', findTrain: 'ट्रेन खोजें', findTrainCaption: 'विकल्पों की तुलना करें', checkTicket: 'टिकट देखें', checkTicketCaption: 'यात्रा की स्थिति देखें', viewAlerts: 'सूचनाएँ देखें', viewAlertsCaption: 'आपके लिए 2 अपडेट', built: 'सरल यात्रा के लिए बनाया गया', important: 'ज़रूरी बातें, कठिन रेलवे शब्दों के बिना।', profileTitle: 'प्रोफ़ाइल और पसंद', profileLede: 'यात्रा के अनुसार अनुभव बदलें।', easyMode: 'आसान मोड', easyDescription: 'बड़ा टेक्स्ट, सरल शब्द, बड़े बटन', language: 'भाषा', languageDescription: 'भाषा चुनें', about: 'इस वेबसाइट के बारे में', aboutText: 'यह वेबसाइट रेलवे की जानकारी को समझना और उपयोग करना आसान बनाती है।', savedPassengers: 'सहेजे गए यात्री', manage: 'प्रबंधित करें', trustFirst: 'भरोसा पहले', trustText: 'सिर्फ डेमो डेटा। असली बुकिंग या भुगतान जुड़ा नहीं है।' },
@@ -185,12 +190,6 @@ function buildTrainResults(criteria: SearchCriteria) {
   })
 }
 
-function parseVoiceRoute(transcript: string) {
-  const cleaned = transcript.replace(/[?.]/g, '').trim()
-  const route = cleaned.match(/from\s+(.+?)\s+to\s+(.+)/i) ?? cleaned.match(/^(.+?)\s+to\s+(.+)$/i)
-  return route ? { from: route[1].trim(), to: route[2].trim() } : undefined
-}
-
 function App() {
   const [view, setView] = useState<View>('home')
   const [filter, setFilter] = useState<ResultFilter>('best')
@@ -204,6 +203,9 @@ function App() {
   const [toast, setToast] = useState('')
   const [voiceListening, setVoiceListening] = useState(false)
   const [voiceDraft, setVoiceDraft] = useState('')
+  const [authOpen, setAuthOpen] = useState(false)
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login')
+  const [session, setSession] = useState(() => getStoredSession())
   const copy = { ...languageCopy[language], ...languageActions[language] }
 
   useEffect(() => {
@@ -217,14 +219,17 @@ function App() {
   }
 
   const visibleResults = useMemo(() => {
-    const results = buildTrainResults(searchedCriteria)
+    const recommendationResults = getRecommendations({ from: searchedCriteria.from, to: searchedCriteria.to, travelDate: searchedCriteria.date, timePreference: searchedCriteria.timePreference === 'Any time' ? undefined : searchedCriteria.timePreference.toLocaleLowerCase().replace(' ', '-') as 'early-morning' | 'morning' | 'afternoon' | 'evening' | 'night', className: searchedCriteria.className, passengers: Number.parseInt(searchedCriteria.passengers, 10) || 1, source: 'typed', language }).results
+    const legacyRouteKey = `${searchedCriteria.from.toLowerCase()}|${searchedCriteria.to.toLowerCase()}`
+    const sourceResults = routeAdjustments[legacyRouteKey] ? buildTrainResults(searchedCriteria) : recommendationResults.length ? recommendationResults : buildTrainResults(searchedCriteria)
+    const results = sourceResults
     if (filter === 'best') return results
     return [...results].sort((first, second) => {
       if (filter === 'cheapest') return first.fare - second.fare
       if (filter === 'fastest') return first.duration.localeCompare(second.duration)
       return Number(second.availability === 'available') - Number(first.availability === 'available')
     })
-  }, [filter, searchedCriteria])
+  }, [filter, searchedCriteria, language])
 
   const updateSearchField = (field: SearchField, value: string) => {
     setSearchCriteria((current) => ({ ...current, [field]: value }))
@@ -242,48 +247,18 @@ function App() {
   }
 
   const handleVoiceSearch = () => {
-    const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition
-    if (!Recognition) {
-      setToast('Voice input is unavailable here. Type the route below instead.')
-      return
-    }
-
-    const recognition = new Recognition()
-    recognition.lang = 'en-IN'
-    recognition.interimResults = false
-    recognition.maxAlternatives = 1
-    recognition.onstart = () => setVoiceListening(true)
-    recognition.onend = () => setVoiceListening(false)
-    recognition.onerror = () => {
-      setVoiceListening(false)
-      setToast('We could not hear that. Please try again or type your stations.')
-    }
-    recognition.onresult = (event) => {
-      const transcript = event.results[0]?.[0]?.transcript ?? ''
-      const route = parseVoiceRoute(transcript)
-      setVoiceListening(false)
-      if (!route) {
-        setToast('Please say your route like “Mumbai to Pune”.')
-        return
-      }
-      setSearchCriteria((current) => ({ ...current, ...route }))
-      setToast(`Heard “${transcript}”. Check the fields, then find trains.`)
-    }
-    try {
-      recognition.start()
-    } catch {
-      setVoiceListening(false)
-      setToast('Voice search could not start. Please type your stations instead.')
-    }
+    const controller = createVoiceRecognition({ language, onStart: () => setVoiceListening(true), onEnd: () => setVoiceListening(false), onError: () => { setVoiceListening(false); setToast('We could not hear that. Please type your route instead.') }, onTranscript: (transcript) => { const parsed = parseJourneyText(transcript, language, { travelDate: searchCriteria.date, className: searchCriteria.className, passengers: Number.parseInt(searchCriteria.passengers, 10) || 1 }); setVoiceListening(false); if (!parsed.requestPatch.from || !parsed.requestPatch.to) { setVoiceDraft(transcript); setToast('We heard you. Please check the route fields below.'); return } setSearchCriteria((current) => ({ ...current, from: parsed.requestPatch.from ?? current.from, to: parsed.requestPatch.to ?? current.to, date: parsed.requestPatch.travelDate ?? current.date })); setToast(`${parsed.message} Check the fields, then find trains.`) } })
+    if (!controller.isSupported) { setToast('Voice input is unavailable here. Type the route below instead.'); return }
+    try { controller.start() } catch { setVoiceListening(false); setToast('Voice search could not start. Please type your stations instead.') }
   }
 
   const applyVoiceDraft = () => {
-    const route = parseVoiceRoute(voiceDraft)
-    if (!route) {
+    const parsed = parseJourneyText(voiceDraft, language, { travelDate: searchCriteria.date, className: searchCriteria.className, passengers: Number.parseInt(searchCriteria.passengers, 10) || 1 })
+    if (!parsed.requestPatch.from || !parsed.requestPatch.to) {
       setToast('Try a route like “Mumbai to Pune”.')
       return
     }
-    setSearchCriteria((current) => ({ ...current, ...route }))
+    setSearchCriteria((current) => ({ ...current, from: parsed.requestPatch.from ?? current.from, to: parsed.requestPatch.to ?? current.to, date: parsed.requestPatch.travelDate ?? current.date }))
     setVoiceDraft('')
     setToast('Route added. Check the fields, then find trains.')
   }
@@ -308,7 +283,7 @@ function App() {
     <a className="skip-link" href="#main-content">Skip to main content</a>
     <div className="main-column">
       <header className="topbar site-header">
-        <div className="site-header-inner"><Brand onNavigate={() => goTo('home')} /><PrimaryNavigation activeView={view} onNavigate={goTo} copy={copy} /><div className="header-actions"><button className="header-help" type="button" onClick={() => setToast('Help centre preview coming next.')}><Info size={15} aria-hidden="true" />Help</button><button className="profile-chip" type="button" onClick={() => goTo('profile')}><span className="avatar">RK</span><span className="profile-name">Riya Kapoor</span><ChevronRight size={15} aria-hidden="true" /></button></div></div>
+        <div className="site-header-inner"><Brand onNavigate={() => goTo('home')} /><PrimaryNavigation activeView={view} onNavigate={goTo} copy={copy} /><div className="header-actions"><button className="header-help" type="button" onClick={() => setToast('Help centre preview coming next.')}><Info size={15} aria-hidden="true" />Help</button>{session ? <button className="profile-chip" type="button" onClick={() => goTo('profile')}><span className="avatar">{session.user.name.slice(0, 2).toUpperCase()}</span><span className="profile-name">{session.user.name}</span><ChevronRight size={15} aria-hidden="true" /></button> : <button className="secondary-button" type="button" onClick={() => { setAuthMode('login'); setAuthOpen(true) }}>Log in</button>}</div></div>
       </header>
       <main id="main-content" className="content-area">
         {view === 'home' && <HomeView copy={copy} criteria={searchCriteria} voiceListening={voiceListening} voiceDraft={voiceDraft} onVoiceSearch={handleVoiceSearch} onVoiceDraftChange={setVoiceDraft} onApplyVoiceDraft={applyVoiceDraft} onChange={updateSearchField} onSearch={handleSearch} onNavigate={goTo} />}
@@ -318,11 +293,20 @@ function App() {
         {view === 'trips' && <TripsView train={selectedTrain} seatWatchActive={seatWatchActive} onJourney={() => goTo('journey')} onTicket={() => goTo('ticket')} onSearch={() => goTo('search')} />}
         {view === 'journey' && <JourneyView train={selectedTrain} delayed={delayed} onDelay={() => { setDelayed(true); setToast('Journey updated: a 90-minute delay needs your attention.') }} onAnnounce={setToast} />}
         {view === 'alerts' && <AlertsView train={selectedTrain} delayed={delayed} onJourney={() => goTo('journey')} />}
-        {view === 'profile' && <ProfileView copy={copy} easyMode={easyMode} language={language} onEasyMode={() => { setEasyMode((current) => !current); setToast(!easyMode ? 'Easy Mode is on.' : 'Easy Mode is off.') }} onLanguage={chooseLanguage} />}
+        {view === 'profile' && <ProfileView copy={copy} easyMode={easyMode} language={language} userName={session?.user.name} onEasyMode={() => { setEasyMode((current) => !current); setToast(!easyMode ? 'Easy Mode is on.' : 'Easy Mode is off.') }} onLanguage={chooseLanguage} onLogout={() => { logoutDemo(); setSession(null); setToast('You are logged out of the demo.') }} />}
       </main>
     </div>
-    <div className={`toast ${toast ? 'toast-visible' : ''}`} role="status" aria-live="polite">{toast}</div>
+    <div className={`toast ${toast ? 'toast-visible' : ''}`} role="status" aria-live="polite">{toast}</div>{authOpen && <AuthDialog mode={authMode} onClose={() => setAuthOpen(false)} onModeChange={setAuthMode} onSuccess={(nextSession) => { saveSession(nextSession); setSession(nextSession); setAuthOpen(false); setToast('You are signed in to the demo.') }} />}
   </div>
+}
+
+function AuthDialog({ mode, onClose, onModeChange, onSuccess }: { mode: 'login' | 'signup'; onClose: () => void; onModeChange: (mode: 'login' | 'signup') => void; onSuccess: (session: ReturnType<typeof loginDemo>) => void }) {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('demo@irctc-reimagined.test')
+  const [password, setPassword] = useState('demo123')
+  const [error, setError] = useState('')
+  const submit = () => { try { onSuccess(mode === 'login' ? loginDemo({ email, password }) : signupDemo({ name: name || 'Demo Passenger', email, preferredLanguage: 'english' })) } catch (nextError) { setError(nextError instanceof Error ? nextError.message : 'Please try again.') } }
+  return <div className="auth-backdrop" role="dialog" aria-modal="true" aria-labelledby="auth-title"><section className="auth-dialog"><button className="auth-close" type="button" onClick={onClose} aria-label="Close login">×</button><span className="eyebrow">Demo account</span><h2 id="auth-title">{mode === 'login' ? 'Log in' : 'Create your account'}</h2><p>{mode === 'login' ? 'Use the demo details below to continue.' : 'A quick signup for this prototype.'}</p>{mode === 'signup' && <label className="field"><span>Your name</span><input aria-label="Your name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Asha Kumar" /></label>}<label className="field"><span>Email or mobile</span><input aria-label="Email or mobile" value={email} onChange={(event) => setEmail(event.target.value)} /></label>{mode === 'login' && <label className="field"><span>Password</span><input aria-label="Password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></label>}{error && <p className="auth-error" role="alert">{error}</p>}<button className="primary-button full-button" type="button" onClick={submit}>{mode === 'login' ? 'Log in' : 'Create demo account'}</button><button className="text-button" type="button" onClick={() => { setError(''); onModeChange(mode === 'login' ? 'signup' : 'login') }}>{mode === 'login' ? 'New here? Sign up' : 'Already have an account? Log in'}</button><small>Mock account only. No real credentials are stored.</small></section></div>
 }
 
 function Brand({ onNavigate }: { onNavigate?: () => void }) {
@@ -375,8 +359,8 @@ function AlertsView({ train, delayed, onJourney }: { train: TrainResult; delayed
   return <><div className="eyebrow"><Bell size={14} aria-hidden="true" />Only what matters</div><h1>Alerts</h1><p className="lede">Useful updates about your tickets, seats, and journeys.</p><div className="alert-list">{delayed && <AlertItem icon={<CircleAlert size={19} aria-hidden="true" />} title="Your train is delayed by 90 minutes" text="Open Journey Mode to see your options and decide what to do next." time="Just now" tone="danger" action="View journey" onAction={onJourney} />}<AlertItem icon={<BellRing size={19} aria-hidden="true" />} title="Platform 6 confirmed for your journey" text={`${train.name} departs from ${train.from} at ${train.departure} on 29 Aug.`} time="Today · 10:42 AM" /><AlertItem icon={<Eye size={19} aria-hidden="true" />} title="Seat watch is active" text="Kaveri Express is currently full. We’ll notify you if a seat opens up." time="Yesterday · 06:20 PM" tone="blue" /><AlertItem icon={<CircleCheck size={19} aria-hidden="true" />} title="Your booking is confirmed" text={`${train.name} · PNR 4827 1930 · S3, seat 42.`} time="27 Aug · 04:15 PM" tone="green" /></div></>
 }
 
-function ProfileView({ copy, easyMode, language, onEasyMode, onLanguage }: { copy: Record<string, string>; easyMode: boolean; language: Language; onEasyMode: () => void; onLanguage: (language: Language) => void }) {
-  return <><div className="eyebrow"><Accessibility size={14} aria-hidden="true" />{copy.profile}</div><h1>{copy.profileTitle}</h1><p className="lede">{copy.profileLede}</p><div className="profile-layout"><section className="panel preferences-panel"><PreferenceRow title={copy.easyMode} description={copy.easyDescription}><button className={`toggle ${easyMode ? 'on' : ''}`} type="button" aria-pressed={easyMode} aria-label="Toggle Easy Mode" onClick={onEasyMode}><i /></button></PreferenceRow><PreferenceRow title={copy.language} description={copy.languageDescription}><div className="language-buttons" role="group" aria-label={copy.language}>{languageOptions.map((option) => <button className={language === option.id ? 'selected' : ''} type="button" key={option.id} onClick={() => onLanguage(option.id)}>{option.label}</button>)}</div></PreferenceRow><PreferenceRow title={copy.savedPassengers} description="Riya Kapoor"><button className="text-button" type="button">{copy.manage}</button></PreferenceRow></section><section className="panel about-panel"><div className="about-symbol"><Languages size={21} aria-hidden="true" /></div><h2>{copy.about}</h2><p>{copy.aboutText}</p><div className="trust-box"><ShieldCheck size={18} aria-hidden="true" /><div><strong>{copy.trustFirst}</strong><span>{copy.trustText}</span></div></div></section></div></>
+function ProfileView({ copy, easyMode, language, userName, onEasyMode, onLanguage, onLogout }: { copy: Record<string, string>; easyMode: boolean; language: Language; userName?: string; onEasyMode: () => void; onLanguage: (language: Language) => void; onLogout: () => void }) {
+  return <><div className="eyebrow"><Accessibility size={14} aria-hidden="true" />{copy.profile}</div><h1>{copy.profileTitle}</h1><p className="lede">{copy.profileLede}</p>{userName ? <div className="signed-in-card"><span className="avatar">{userName.slice(0, 2).toUpperCase()}</span><div><strong>{userName}</strong><span>Signed in to demo account</span></div><button className="text-button" type="button" onClick={onLogout}>Log out</button></div> : <div className="signed-in-card"><div><strong>You are browsing as a guest</strong><span>Log in to save passengers and preferences.</span></div></div>}<div className="profile-layout"><section className="panel preferences-panel"><PreferenceRow title={copy.easyMode} description={copy.easyDescription}><button className={`toggle ${easyMode ? 'on' : ''}`} type="button" aria-pressed={easyMode} aria-label="Toggle Easy Mode" onClick={onEasyMode}><i /></button></PreferenceRow><PreferenceRow title={copy.language} description={copy.languageDescription}><div className="language-buttons" role="group" aria-label={copy.language}>{languageOptions.map((option) => <button className={language === option.id ? 'selected' : ''} type="button" key={option.id} onClick={() => onLanguage(option.id)}>{option.label}</button>)}</div></PreferenceRow><PreferenceRow title={copy.savedPassengers} description={userName ?? 'Guest'}><button className="text-button" type="button">{copy.manage}</button></PreferenceRow></section><section className="panel about-panel"><div className="about-symbol"><Languages size={21} aria-hidden="true" /></div><h2>{copy.about}</h2><p>{copy.aboutText}</p><div className="trust-box"><ShieldCheck size={18} aria-hidden="true" /><div><strong>{copy.trustFirst}</strong><span>{copy.trustText}</span></div></div></section></div></>
 }
 
 function Field({ label, value, icon, ariaLabel, select = false, options = [], suggestions = [], inputType = 'text', onChange, hint }: { label: string; value: string; icon?: ReactNode; ariaLabel: string; select?: boolean; options?: string[]; suggestions?: string[]; inputType?: 'text' | 'date'; onChange?: (value: string) => void; hint?: string }) {

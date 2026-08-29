@@ -13,6 +13,19 @@ This is a frontend-only IRCTC redesign prototype for the Varun Mayya hackathon. 
 
 The project intentionally uses synthetic data and simulated actions. It does not connect to IRCTC, process real payments, or make live availability claims.
 
+## Backend and voice prototype
+
+The project includes a synthetic Vercel API boundary under `api/` for search, recommendations, mock authentication, queue status, and disruption recovery. Client services provide route-aware recommendation scoring, connecting-train fallback, stored journey intent, multilingual natural-language parsing, and browser speech recognition with typed fallback.
+
+Demo login credentials:
+
+```text
+Email: demo@irctc-reimagined.test
+Password: demo123
+```
+
+Voice recognition depends on browser and operating-system support. Queue, availability, delay, recovery, credentials, and payment states remain synthetic demo behavior.
+
 ## Included prototype flows
 
 - Task-focused train search with plain-language guidance
