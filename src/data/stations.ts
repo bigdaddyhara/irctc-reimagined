@@ -1,4 +1,4 @@
-import type { Station } from '../domain/types'
+import type { Station } from '../domain/types.js'
 
 const stationRows: Array<[name: string, city: string, aliases: string[]]> = [
   ['Chennai Central', 'Chennai', ['Chennai', 'MAS']], ['Chennai Egmore', 'Chennai', ['Egmore']], ['Bengaluru', 'Bengaluru', ['Bangalore', 'KSR Bengaluru', 'SBC']],

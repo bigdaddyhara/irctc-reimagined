@@ -1,4 +1,4 @@
-export { stations } from './stations'
-export { trains, routeFamilies } from './trains'
-export { demoUsers } from './users'
-export { disruptions } from './disruptions'
+export { stations } from './stations.js'
+export { trains, routeFamilies } from './trains.js'
+export { demoUsers } from './users.js'
+export { disruptions } from './disruptions.js'

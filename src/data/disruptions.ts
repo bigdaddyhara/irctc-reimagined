@@ -1,4 +1,4 @@
-import type { Disruption } from '../domain/types'
+import type { Disruption } from '../domain/types.js'
 
 export const disruptions: Disruption[] = [
   { id: 'delay-brindavan', trainId: 'brindavan', type: 'delay', minutes: 90, message: 'This train is running 90 minutes late. We checked options that still fit your original journey.' },

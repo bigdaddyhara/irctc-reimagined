@@ -1,4 +1,4 @@
-import type { RouteFamily, Train } from '../domain/types'
+import type { RouteFamily, Train } from '../domain/types.js'
 
 const direct = (id: string, name: string, number: string, from: string, to: string, departure: string, arrival: string, duration: string, fare: number, className: string, availability: Train['availability'], tags: string[], reason: string, extra: Partial<Train> = {}): Train => ({ id, name, number, from, to, departure, arrival, duration, fare, className, availability, tags, reason, ...extra })
 

@@ -1,5 +1,5 @@
-import { routeFamilies, trains } from '../data'
-import type { JourneyRequest, RecommendationResponse, Train } from '../domain/types'
+import { routeFamilies, trains } from '../data/index.js'
+import type { JourneyRequest, RecommendationResponse, Train } from '../domain/types.js'
 
 const minutes = (value: string) => { const [hours, mins] = value.split(':').map(Number); return hours * 60 + mins }
 const preferenceTarget: Record<NonNullable<JourneyRequest['timePreference']>, number> = { 'early-morning': 360, morning: 540, afternoon: 840, evening: 1080, night: 1320 }

@@ -1,4 +1,4 @@
-import { trains } from '../data'
-import type { Disruption, RecoveryOption, SearchReference } from '../domain/types'
+import { trains } from '../data/index.js'
+import type { Disruption, RecoveryOption, SearchReference } from '../domain/types.js'
 
 export const getRecoveryOptions = (reference: SearchReference, disruption: Disruption): RecoveryOption[] => trains.filter((train) => train.id !== disruption.trainId && train.from === reference.request.from && train.to === reference.request.to && (reference.request.className === 'Any class' || train.className === reference.request.className)).map((train) => ({ train, score: train.availability === 'available' ? 90 : 60, explanation: `This option keeps your original ${reference.request.from} to ${reference.request.to} journey.` , tradeoffs: [train.availability === 'available' ? 'Seats are available in demo data' : 'Waiting list applies', `Departs at ${train.departure}`] })).sort((a, b) => b.score - a.score)
