@@ -220,8 +220,7 @@ function App() {
 
   const visibleResults = useMemo(() => {
     const recommendationResults = getRecommendations({ from: searchedCriteria.from, to: searchedCriteria.to, travelDate: searchedCriteria.date, timePreference: searchedCriteria.timePreference === 'Any time' ? undefined : searchedCriteria.timePreference.toLocaleLowerCase().replace(' ', '-') as 'early-morning' | 'morning' | 'afternoon' | 'evening' | 'night', className: searchedCriteria.className, passengers: Number.parseInt(searchedCriteria.passengers, 10) || 1, source: 'typed', language }).results
-    const legacyRouteKey = `${searchedCriteria.from.toLowerCase()}|${searchedCriteria.to.toLowerCase()}`
-    const sourceResults = routeAdjustments[legacyRouteKey] ? buildTrainResults(searchedCriteria) : recommendationResults.length ? recommendationResults : buildTrainResults(searchedCriteria)
+    const sourceResults = recommendationResults.length ? recommendationResults : buildTrainResults(searchedCriteria)
     const results = sourceResults
     if (filter === 'best') return results
     return [...results].sort((first, second) => {

@@ -57,7 +57,7 @@ describe('Indian Railways passenger journey', () => {
     await user.click(screen.getByRole('button', { name: /find trains/i }))
 
     expect(screen.getByText(/Mumbai Central to Pune/i)).toBeInTheDocument()
-    await user.click(within(screen.getByRole('article', { name: /Brindavan Express/i })).getByRole('button', { name: /choose this train/i }))
+    await user.click(within(screen.getByRole('article', { name: /Deccan Queen/i })).getByRole('button', { name: /choose this train/i }))
     await user.click(screen.getByRole('button', { name: /continue to payment/i }))
     expect(screen.getByText('Mumbai Central')).toBeInTheDocument()
     expect(screen.getByText('Pune')).toBeInTheDocument()
@@ -75,8 +75,8 @@ describe('Indian Railways passenger journey', () => {
     await user.click(screen.getByRole('option', { name: 'Jaipur' }))
     await user.click(screen.getByRole('button', { name: /find trains/i }))
     expect(screen.getByText(/Jaipur to Bengaluru/)).toBeInTheDocument()
-    expect(screen.getByText('₹760')).toBeInTheDocument()
-    expect(screen.queryByText('₹620')).not.toBeInTheDocument()
+    expect(screen.getByText('Jaipur–Bengaluru Express')).toBeInTheDocument()
+    expect(screen.queryByText('Brindavan Express')).not.toBeInTheDocument()
   })
 
   it('uses browser speech recognition to fill a spoken route', async () => {
