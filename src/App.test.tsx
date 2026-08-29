@@ -1,9 +1,11 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 
 describe('Indian Railways passenger journey', () => {
+  beforeEach(() => localStorage.clear())
+
   it('presents the booking experience as a public mobile website', () => {
     render(<App />)
     expect(screen.getByRole('banner')).toBeInTheDocument()
@@ -16,7 +18,8 @@ describe('Indian Railways passenger journey', () => {
   it('uses native language names and changes visible copy when a language is selected', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: /profile/i }))
+    await user.click(screen.getByRole('button', { name: /profile - log in/i }))
+    await user.click(screen.getByRole('button', { name: /^log in$/i }))
     expect(screen.getByRole('button', { name: 'தமிழ்' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'தமிழ்' }))
     expect(screen.getByRole('heading', { name: 'சுயவிவரம் மற்றும் விருப்பங்கள்' })).toBeInTheDocument()
@@ -150,6 +153,19 @@ describe('Indian Railways passenger journey', () => {
     await user.click(screen.getByRole('button', { name: /review and submit/i }))
     expect(screen.getByRole('heading', { name: /your request is in the demo queue/i })).toBeInTheDocument()
     expect(screen.getByText(/^DELAYREFUND-/)).toBeInTheDocument()
+  })
+
+  it('opens login from the logged-out profile icon and shows past trips after login', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: /profile - log in/i }))
+    expect(screen.getByRole('heading', { name: 'Log in' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /^log in$/i }))
+    expect(screen.getByText('Signed in to demo account')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Past trips' })).toBeInTheDocument()
+    await user.click(screen.getByText('Mumbai Central → Pune'))
+    expect(screen.getByText('Deccan Queen · 12124')).toBeInTheDocument()
+    expect(screen.getAllByText('AC Chair Car')).toHaveLength(2)
   })
 
   it('takes a passenger from search to a confirmed prototype ticket', async () => {
