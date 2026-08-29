@@ -79,6 +79,22 @@ describe('Indian Railways passenger journey', () => {
     expect(screen.queryByText('Brindavan Express')).not.toBeInTheDocument()
   })
 
+  it('does not reuse trains for an unsupported route', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    const fromField = screen.getByRole('textbox', { name: 'Starting station' })
+    await user.clear(fromField)
+    await user.type(fromField, 'Kochi Ernakulam')
+    await user.click(screen.getByRole('option', { name: 'Kochi Ernakulam' }))
+    const toField = screen.getByRole('textbox', { name: 'Destination station' })
+    await user.clear(toField)
+    await user.type(toField, 'Mumbai Central')
+    await user.click(screen.getByRole('option', { name: 'Mumbai Central' }))
+    await user.click(screen.getByRole('button', { name: /find trains/i }))
+    expect(screen.queryByText('Brindavan Express')).not.toBeInTheDocument()
+    expect(screen.getByText(/0 journeys/i)).toBeInTheDocument()
+  })
+
   it('uses browser speech recognition to fill a spoken route', async () => {
     const user = userEvent.setup()
     class FakeSpeechRecognition {

@@ -163,33 +163,6 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(date)
 }
 
-const routeAdjustments: Record<string, Array<{ departure: string; arrival: string; duration: string; fareDelta: number }>> = {
-  'jaipur|bengaluru': [
-    { departure: '06:10', arrival: '13:20', duration: '7h 10m', fareDelta: 140 },
-    { departure: '05:20', arrival: '11:45', duration: '6h 25m', fareDelta: 180 },
-    { departure: '19:40', arrival: '07:15', duration: '11h 35m', fareDelta: 80 },
-    { departure: '14:10', arrival: '21:55', duration: '7h 45m', fareDelta: 110 },
-  ],
-  'mumbai central|pune': [
-    { departure: '06:40', arrival: '10:35', duration: '3h 55m', fareDelta: -90 },
-    { departure: '07:15', arrival: '10:20', duration: '3h 05m', fareDelta: -120 },
-    { departure: '22:00', arrival: '05:20', duration: '7h 20m', fareDelta: -80 },
-    { departure: '15:10', arrival: '19:00', duration: '3h 50m', fareDelta: -70 },
-  ],
-}
-
-function buildTrainResults(criteria: SearchCriteria) {
-  const from = criteria.from.trim() || 'Starting station'
-  const to = criteria.to.trim() || 'Destination station'
-  const routeKey = `${from.toLowerCase()}|${to.toLowerCase()}`
-  const adjustments = routeAdjustments[routeKey]
-  return trainResults.map((train, index) => {
-    const adjustment = adjustments?.[index]
-    const { fareDelta = 0, ...routeDetails } = adjustment ?? {}
-    return { ...train, ...routeDetails, fare: train.fare + fareDelta, from, to, className: criteria.className === 'Any class' ? train.className : criteria.className }
-  })
-}
-
 function App() {
   const [view, setView] = useState<View>('home')
   const [filter, setFilter] = useState<ResultFilter>('best')
@@ -220,7 +193,7 @@ function App() {
 
   const visibleResults = useMemo(() => {
     const recommendationResults = getRecommendations({ from: searchedCriteria.from, to: searchedCriteria.to, travelDate: searchedCriteria.date, timePreference: searchedCriteria.timePreference === 'Any time' ? undefined : searchedCriteria.timePreference.toLocaleLowerCase().replace(' ', '-') as 'early-morning' | 'morning' | 'afternoon' | 'evening' | 'night', className: searchedCriteria.className, passengers: Number.parseInt(searchedCriteria.passengers, 10) || 1, source: 'typed', language }).results
-    const sourceResults = recommendationResults.length ? recommendationResults : buildTrainResults(searchedCriteria)
+    const sourceResults = recommendationResults
     const results = sourceResults
     if (filter === 'best') return results
     return [...results].sort((first, second) => {
